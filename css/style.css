@@ -166,15 +166,30 @@ body {
   color: var(--text-muted);
 }
 
+/* Базовые стили селекта; ограничение ширины — только в строке сортировки */
 .select {
-  flex: 1;
-  max-width: 200px;
   padding: 0.45rem 0.6rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   font: inherit;
+  min-height: 44px;
+}
+
+.sort-label .select {
+  flex: 1;
+  max-width: 200px;
+  min-width: 0;
+  width: auto;
+}
+
+.form-row .select,
+.detail-screen .select,
+.modal__panel .select {
+  display: block;
+  width: 100%;
+  max-width: none;
 }
 
 .note-list {
@@ -506,6 +521,13 @@ body {
   display: flex;
   flex-direction: column;
   animation: slide-up-in 0.28s ease;
+}
+
+/* Иначе display:flex перебивает атрибут hidden — экран детали висит поверх всего */
+.detail-screen[hidden] {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 @keyframes slide-up-in {

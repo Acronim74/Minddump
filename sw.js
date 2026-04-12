@@ -1,4 +1,4 @@
-const CACHE = 'minddump-v1';
+const CACHE = 'minddump-v2';
 const ASSETS = [
   './index.html',
   './css/style.css',

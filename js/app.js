@@ -555,4 +555,12 @@ async function init() {
   await registerSW();
 }
 
-init();
+init().catch((err) => {
+  console.error(err);
+  const pre = document.createElement('pre');
+  pre.setAttribute('role', 'alert');
+  pre.style.cssText =
+    'position:fixed;inset:auto 0 0 0;max-height:40vh;overflow:auto;margin:0;padding:12px;background:#2a1020;color:#f8c8d0;font:12px/1.4 monospace;z-index:100000;border-top:2px solid #f55e7a;white-space:pre-wrap;';
+  pre.textContent = `MindDump: ошибка запуска\n\n${String(err)}\n\n${err?.stack || ''}`;
+  document.body.appendChild(pre);
+});
