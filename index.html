@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f0f13" />
+    <meta name="description" content="MindDump — локальный менеджер мыслей и идей" />
+    <title>MindDump</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./icons/icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <h1 class="app-header__title">MindDump</h1>
+        <div class="app-header__actions" id="header-actions-notes">
+          <button type="button" class="icon-btn" id="btn-search-toggle" aria-label="Поиск">⌕</button>
+          <button type="button" class="icon-btn icon-btn--accent" id="btn-add-note" aria-label="Добавить">+</button>
+        </div>
+        <div class="app-header__actions hidden" id="header-actions-categories">
+          <button type="button" class="icon-btn icon-btn--accent" id="btn-add-category" aria-label="Категория">+</button>
+        </div>
+        <div class="app-header__actions hidden" id="header-actions-settings"></div>
+      </header>
+
+      <div id="search-bar" class="search-bar" hidden>
+        <input type="search" id="search-input" class="search-bar__input" placeholder="Поиск по заметкам…" autocomplete="off" />
+      </div>
+
+      <main class="screens">
+        <section id="screen-notes" class="screen">
+          <div class="toolbar">
+            <div class="chips" id="filter-chips"></div>
+            <label class="sort-label">
+              <span>Сортировка</span>
+              <select id="notes-sort" class="select">
+                <option value="date">По дате</option>
+                <option value="category">По категории</option>
+                <option value="status">По статусу</option>
+              </select>
+            </label>
+          </div>
+          <div id="notes-list" class="note-list"></div>
+        </section>
+
+        <section id="screen-categories" class="screen" hidden>
+          <div id="categories-list" class="categories-list"></div>
+        </section>
+
+        <section id="screen-settings" class="screen" hidden>
+          <div class="settings-block">
+            <h2>Данные</h2>
+            <button type="button" class="btn" id="btn-export">Экспорт JSON</button>
+            <label class="btn btn--secondary file-label">
+              Импорт JSON
+              <input type="file" id="import-file" accept="application/json,.json" hidden />
+            </label>
+            <button type="button" class="btn btn--danger" id="btn-reset">Сбросить все данные</button>
+          </div>
+          <div class="settings-block">
+            <h2>О приложении</h2>
+            <p class="muted">MindDump · версия <span id="app-version">—</span></p>
+            <p class="muted">Данные хранятся только на этом устройстве (IndexedDB).</p>
+          </div>
+        </section>
+      </main>
+
+      <div id="screen-detail" class="detail-screen" hidden aria-hidden="true">
+        <header class="detail-screen__header">
+          <button type="button" class="btn btn--ghost" id="detail-back">← Назад</button>
+          <button type="button" class="btn btn--accent" id="detail-save">Сохранить</button>
+        </header>
+        <div class="detail-screen__body">
+          <input type="text" id="detail-title" class="input input--title" placeholder="Заголовок" />
+          <div class="form-row">
+            <label>Категория</label>
+            <select id="detail-category" class="select"></select>
+          </div>
+          <div class="form-row">
+            <label>Тема</label>
+            <select id="detail-topic" class="select"></select>
+          </div>
+          <div class="form-row">
+            <label>Статус</label>
+            <select id="detail-status" class="select">
+              <option value="open">Открыта</option>
+              <option value="done">Выполнена</option>
+              <option value="archived">В архиве</option>
+            </select>
+          </div>
+          <h3 class="section-title">Действия</h3>
+          <ul id="detail-actions-list" class="action-list"></ul>
+          <div class="add-action-row">
+            <input type="text" id="detail-new-action" class="input" placeholder="Новое действие…" />
+            <button type="button" class="btn btn--secondary" id="detail-add-action">Добавить</button>
+          </div>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Основная навигация">
+        <button type="button" class="nav__btn nav__btn--active" data-tab="notes" aria-current="page">
+          <span class="nav__icon" aria-hidden="true">📋</span>
+          <span>Заметки</span>
+        </button>
+        <button type="button" class="nav__btn" data-tab="categories">
+          <span class="nav__icon" aria-hidden="true">🏷️</span>
+          <span>Категории</span>
+        </button>
+        <button type="button" class="nav__btn" data-tab="settings">
+          <span class="nav__icon" aria-hidden="true">⚙️</span>
+          <span>Настройки</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- New note -->
+    <div id="new-note-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="new-note-modal-title">
+      <div class="modal__backdrop" data-close="new-note-modal"></div>
+      <div class="modal__panel slide-up">
+        <h2 id="new-note-modal-title" class="modal__title">Новая заметка</h2>
+        <div class="form-row">
+          <label>Заголовок</label>
+          <input type="text" id="new-note-title" class="input" placeholder="О чём заметка" />
+        </div>
+        <div class="form-row">
+          <label>Категория</label>
+          <select id="new-note-category" class="select"></select>
+        </div>
+        <div class="form-row">
+          <label>Тема</label>
+          <select id="new-note-topic" class="select"></select>
+        </div>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--ghost" id="new-note-cancel">Отмена</button>
+          <button type="button" class="btn btn--accent" id="new-note-save">Создать</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category -->
+    <div id="category-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="cat-modal-title">
+      <div class="modal__backdrop" data-close="category-modal"></div>
+      <div class="modal__panel slide-up">
+        <h2 id="cat-modal-title" class="modal__title">Категория</h2>
+        <input type="hidden" id="cat-modal-id" value="" />
+        <input type="hidden" id="cat-modal-color" value="#5ef5c0" />
+        <div class="form-row">
+          <label>Название</label>
+          <input type="text" id="cat-modal-name" class="input" />
+        </div>
+        <div class="form-row">
+          <label>Цвет</label>
+          <div class="color-swatches">
+            <button type="button" class="color-swatch" data-hex="#5ef5c0" style="--sw:#5ef5c0" aria-label="mint"></button>
+            <button type="button" class="color-swatch" data-hex="#7eb8ff" style="--sw:#7eb8ff" aria-label="blue"></button>
+            <button type="button" class="color-swatch" data-hex="#c49bff" style="--sw:#c49bff" aria-label="violet"></button>
+            <button type="button" class="color-swatch" data-hex="#ffb86c" style="--sw:#ffb86c" aria-label="orange"></button>
+            <button type="button" class="color-swatch" data-hex="#ff7ab6" style="--sw:#ff7ab6" aria-label="pink"></button>
+            <button type="button" class="color-swatch" data-hex="#f5e56e" style="--sw:#f5e56e" aria-label="yellow"></button>
+            <button type="button" class="color-swatch" data-hex="#8be9fd" style="--sw:#8be9fd" aria-label="cyan"></button>
+            <button type="button" class="color-swatch" data-hex="#bd93f9" style="--sw:#bd93f9" aria-label="purple"></button>
+          </div>
+        </div>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--ghost" id="cat-modal-cancel">Отмена</button>
+          <button type="button" class="btn btn--danger btn--ghost" id="cat-modal-delete" hidden>Удалить</button>
+          <button type="button" class="btn btn--accent" id="cat-modal-save">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Topic -->
+    <div id="topic-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="topic-modal-title">
+      <div class="modal__backdrop" data-close="topic-modal"></div>
+      <div class="modal__panel slide-up">
+        <h2 id="topic-modal-title" class="modal__title">Тема</h2>
+        <div class="form-row">
+          <label>Название</label>
+          <input type="text" id="topic-modal-name" class="input" />
+        </div>
+        <div class="form-row">
+          <label>Категория</label>
+          <select id="topic-modal-category" class="select"></select>
+        </div>
+        <div class="modal__actions">
+          <button type="button" class="btn btn--ghost" id="topic-modal-cancel">Отмена</button>
+          <button type="button" class="btn btn--danger btn--ghost" id="topic-modal-delete" hidden>Удалить</button>
+          <button type="button" class="btn btn--accent" id="topic-modal-save">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>
