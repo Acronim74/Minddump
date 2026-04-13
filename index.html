@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MindDump</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0f0f13;
+        --surface: #1a1a22;
+        --surface-2: #22222e;
+        --accent: #5ef5c0;
+        --text: #e8e8f0;
+        --text-muted: #6b6b80;
+        --danger: #f55e7a;
+        --border: #2a2a38;
+        --radius: 12px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      #app {
+        max-width: 860px;
+        margin: 0 auto;
+        min-height: 100dvh;
+        padding: 16px 16px 86px;
+      }
+
+      .top-title {
+        margin: 0 0 14px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+
+      .screen {
+        display: none;
+      }
+
+      .screen.active {
+        display: block;
+      }
+
+      .placeholder {
+        border: 1px dashed var(--border);
+        border-radius: var(--radius);
+        color: var(--text-muted);
+        padding: 20px;
+        background: var(--surface);
+      }
+
+      .cats-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+      }
+
+      .cat-row {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 10px;
+        background: var(--surface-2);
+        overflow: hidden;
+      }
+
+      .cat-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .accordion-btn {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-muted);
+        border-radius: 8px;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+      }
+
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .cat-name {
+        font-weight: 500;
+        flex: 1;
+      }
+
+      .icon-btn {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+        padding: 5px 8px;
+        cursor: pointer;
+      }
+
+      .icon-btn.danger {
+        color: var(--danger);
+      }
+
+      .cat-body {
+        padding: 0 10px 10px 42px;
+      }
+
+      .topic-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .topic-name {
+        flex: 1;
+        color: #d6d6e4;
+      }
+
+      .btn {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+        padding: 9px 12px;
+      }
+
+      .btn.ghost {
+        background: transparent;
+      }
+
+      .btn.accent {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .btn.full {
+        width: 100%;
+      }
+
+      .btn.link {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--accent);
+      }
+
+      .inline-form {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #15151d;
+      }
+
+      .input {
+        width: 100%;
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        font: inherit;
+      }
+
+      .colors {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .color-btn {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+      }
+
+      .color-btn.active {
+        border-color: white;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .muted {
+        color: var(--text-muted);
+      }
+
+      #bottom-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 5;
+        display: flex;
+        gap: 8px;
+        background: rgba(15, 15, 19, 0.96);
+        border-top: 1px solid var(--border);
+        padding: 10px;
+      }
+
+      .nav-btn {
+        flex: 1;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        color: var(--text-muted);
+        padding: 10px 8px;
+        cursor: pointer;
+      }
+
+      .nav-btn.active {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1 class="top-title">MindDump</h1>
+
+      <div id="screen-notes" class="screen">
+        <div class="placeholder">Раздел в разработке</div>
+      </div>
+
+      <div id="screen-cats" class="screen active">
+        <div class="cats-wrap">
+          <div id="cats-list"></div>
+          <div id="new-category-slot"></div>
+          <button id="new-category-btn" class="btn accent full" type="button">+ Новая категория</button>
+        </div>
+      </div>
+
+      <div id="screen-settings" class="screen">
+        <div class="placeholder">Раздел в разработке</div>
+      </div>
+    </div>
+
+    <nav id="bottom-nav">
+      <button class="nav-btn" data-screen="notes" type="button">📋 Заметки</button>
+      <button class="nav-btn active" data-screen="cats" type="button">🏷️ Категории</button>
+      <button class="nav-btn" data-screen="settings" type="button">⚙️ Настройки</button>
+    </nav>
+
+    <script>
+      const DB_NAME = "minddump-db";
+      const DB_VERSION = 1;
+
+      const CATEGORY_COLORS = [
+        "#5ef5c0",
+        "#7dd3fc",
+        "#c4b5fd",
+        "#fb7185",
+        "#f59e0b",
+        "#facc15",
+        "#34d399",
+        "#60a5fa",
+      ];
+
+      const state = {
+        categories: [],
+        topicsByCategory: new Map(),
+        categoryOpen: new Set(),
+        editCategoryId: null,
+        addTopicForCategoryId: null,
+        editTopicId: null,
+      };
+
+      let db = null;
+
+      function uid() {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+        return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
+      }
+
+      async function dbInit() {
+        db = await new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onerror = () => reject(req.error);
+          req.onupgradeneeded = (event) => {
+            const idb = event.target.result;
+            if (!idb.objectStoreNames.contains("categories")) {
+              idb.createObjectStore("categories", { keyPath: "id" });
+            }
+            if (!idb.objectStoreNames.contains("topics")) {
+              const s = idb.createObjectStore("topics", { keyPath: "id" });
+              s.createIndex("categoryId", "categoryId", { unique: false });
+            }
+            if (!idb.objectStoreNames.contains("notes")) {
+              idb.createObjectStore("notes", { keyPath: "id" });
+            }
+            if (!idb.objectStoreNames.contains("actions")) {
+              idb.createObjectStore("actions", { keyPath: "id" });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+        });
+      }
+
+      async function dbAdd(store, obj) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readwrite");
+          const req = tx.objectStore(store).add(obj);
+          req.onsuccess = () => resolve(obj);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function dbGetAll(store) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readonly");
+          const req = tx.objectStore(store).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function dbGet(store, id) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readonly");
+          const req = tx.objectStore(store).get(id);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function dbPut(store, obj) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readwrite");
+          const req = tx.objectStore(store).put(obj);
+          req.onsuccess = () => resolve(obj);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function dbDelete(store, id) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readwrite");
+          const req = tx.objectStore(store).delete(id);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async function dbGetByIndex(store, indexName, value) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readonly");
+          const idx = tx.objectStore(store).index(indexName);
+          const req = idx.getAll(value);
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      function switchScreen(target) {
+        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+        document.getElementById("screen-" + target).classList.add("active");
+        document.querySelectorAll(".nav-btn").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.screen === target);
+        });
+      }
+
+      async function loadCatsData() {
+        const categories = await dbGetAll("categories");
+        categories.sort((a, b) => a.name.localeCompare(b.name, "ru"));
+        const topics = await dbGetAll("topics");
+        const map = new Map();
+        categories.forEach((c) => map.set(c.id, []));
+        topics.forEach((t) => {
+          if (!map.has(t.categoryId)) map.set(t.categoryId, []);
+          map.get(t.categoryId).push(t);
+        });
+        map.forEach((arr) => arr.sort((a, b) => a.name.localeCompare(b.name, "ru")));
+        state.categories = categories;
+        state.topicsByCategory = map;
+        categories.forEach((c) => {
+          if (!state.categoryOpen.has(c.id)) state.categoryOpen.add(c.id);
+        });
+      }
+
+      function renderColorPicker(selectedColor) {
+        return `
+          <div class="colors">
+            ${CATEGORY_COLORS.map((c) => {
+              const active = c.toLowerCase() === selectedColor.toLowerCase() ? "active" : "";
+              return `<button type="button" class="color-btn ${active}" data-color="${c}" style="background:${c}"></button>`;
+            }).join("")}
+          </div>
+        `;
+      }
+
+      function renderCategoryInlineForm(category) {
+        const isEdit = Boolean(category);
+        const name = category ? category.name : "";
+        const color = category ? category.color : CATEGORY_COLORS[0];
+        return `
+          <div class="inline-form" data-form-type="${isEdit ? "edit-category" : "new-category"}" data-id="${category ? category.id : ""}">
+            <input class="input" name="name" placeholder="Название категории" value="${escapeHtml(name)}" />
+            ${renderColorPicker(color)}
+            <div class="form-actions">
+              <button class="btn accent" data-action="save-category" type="button">Сохранить</button>
+              <button class="btn ghost" data-action="cancel-category" type="button">Отмена</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderTopicInlineForm(categoryId, topic) {
+        const isEdit = Boolean(topic);
+        return `
+          <div class="inline-form" data-form-type="${isEdit ? "edit-topic" : "new-topic"}" data-category-id="${categoryId}" data-topic-id="${topic ? topic.id : ""}">
+            <input class="input" name="topic-name" placeholder="Название темы" value="${escapeHtml(topic ? topic.name : "")}" />
+            <div class="form-actions">
+              <button class="btn accent" data-action="save-topic" type="button">Сохранить</button>
+              <button class="btn ghost" data-action="cancel-topic" type="button">Отмена</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderCatsScreen() {
+        const list = document.getElementById("cats-list");
+        const newCatSlot = document.getElementById("new-category-slot");
+        const rows = state.categories
+          .map((cat) => {
+            const isOpen = state.categoryOpen.has(cat.id);
+            const topics = state.topicsByCategory.get(cat.id) || [];
+            const isEditingCat = state.editCategoryId === cat.id;
+
+            const topicsHtml = topics
+              .map((topic) => {
+                const isEditingTopic = state.editTopicId === topic.id;
+                return `
+                  <div class="topic-row">
+                    ${isEditingTopic
+                      ? renderTopicInlineForm(cat.id, topic)
+                      : `<div class="topic-name">├─ ${escapeHtml(topic.name)}</div>
+                         <button class="icon-btn" data-action="edit-topic" data-id="${topic.id}" type="button">✏️</button>
+                         <button class="icon-btn danger" data-action="delete-topic" data-id="${topic.id}" type="button">🗑️</button>`}
+                  </div>
+                `;
+              })
+              .join("");
+
+            const addTopicOpen = state.addTopicForCategoryId === cat.id;
+            return `
+              <div class="cat-row">
+                <div class="cat-header">
+                  <button class="accordion-btn" data-action="toggle-cat" data-id="${cat.id}" type="button">${isOpen ? "▾" : "▸"}</button>
+                  <span class="dot" style="background:${cat.color}"></span>
+                  ${
+                    isEditingCat
+                      ? `<div style="flex:1">${renderCategoryInlineForm(cat)}</div>`
+                      : `<div class="cat-name">${escapeHtml(cat.name)}</div>
+                         <button class="icon-btn" data-action="edit-cat" data-id="${cat.id}" type="button">✏️</button>
+                         <button class="icon-btn danger" data-action="delete-cat" data-id="${cat.id}" type="button">🗑️</button>`
+                  }
+                </div>
+                ${isOpen ? `<div class="cat-body">${topicsHtml}
+                  ${addTopicOpen ? renderTopicInlineForm(cat.id, null) : ""}
+                  <div style="margin-top:8px">
+                    <button class="btn link" data-action="add-topic" data-id="${cat.id}" type="button">+ Добавить тему</button>
+                  </div>
+                </div>` : ""}
+              </div>
+            `;
+          })
+          .join("");
+        list.innerHTML = rows || `<p class="muted">Категорий пока нет</p>`;
+        newCatSlot.innerHTML = state.editCategoryId === "new" ? renderCategoryInlineForm(null) : "";
+      }
+
+      function bindCatsEvents() {
+        const catsRoot = document.getElementById("screen-cats");
+
+        catsRoot.addEventListener("click", async (e) => {
+          const target = e.target.closest("[data-action]");
+          if (!target) {
+            const colorBtn = e.target.closest(".color-btn");
+            if (colorBtn) {
+              const form = colorBtn.closest(".inline-form");
+              form.querySelectorAll(".color-btn").forEach((b) => b.classList.remove("active"));
+              colorBtn.classList.add("active");
+            }
+            return;
+          }
+
+          const action = target.dataset.action;
+          const id = target.dataset.id;
+
+          if (action === "toggle-cat") {
+            if (state.categoryOpen.has(id)) state.categoryOpen.delete(id);
+            else state.categoryOpen.add(id);
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "edit-cat") {
+            state.editCategoryId = id;
+            state.editTopicId = null;
+            state.addTopicForCategoryId = null;
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "delete-cat") {
+            const cat = await dbGet("categories", id);
+            if (!cat) return;
+            if (!confirm(`Удалить категорию "${cat.name}" и все её темы?`)) return;
+            const topics = await dbGetByIndex("topics", "categoryId", id);
+            for (const t of topics) await dbDelete("topics", t.id);
+            await dbDelete("categories", id);
+            state.editCategoryId = null;
+            state.addTopicForCategoryId = null;
+            state.editTopicId = null;
+            await loadCatsData();
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "add-topic") {
+            state.addTopicForCategoryId = id;
+            state.editTopicId = null;
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "edit-topic") {
+            state.editTopicId = id;
+            state.addTopicForCategoryId = null;
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "delete-topic") {
+            const topic = await dbGet("topics", id);
+            if (!topic) return;
+            if (!confirm(`Удалить тему "${topic.name}"?`)) return;
+            await dbDelete("topics", id);
+            state.editTopicId = null;
+            await loadCatsData();
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "cancel-category") {
+            state.editCategoryId = null;
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "save-category") {
+            const form = target.closest(".inline-form");
+            const idFromForm = form.dataset.id;
+            const input = form.querySelector('input[name="name"]');
+            const activeColorBtn = form.querySelector(".color-btn.active");
+            const name = input.value.trim();
+            if (!name) {
+              input.focus();
+              return;
+            }
+            const color = activeColorBtn ? activeColorBtn.dataset.color : CATEGORY_COLORS[0];
+            if (idFromForm) {
+              const current = await dbGet("categories", idFromForm);
+              if (!current) return;
+              await dbPut("categories", { ...current, name, color });
+            } else {
+              await dbAdd("categories", {
+                id: uid(),
+                name,
+                color,
+                createdAt: new Date().toISOString(),
+              });
+              state.editCategoryId = null;
+            }
+            await loadCatsData();
+            state.editCategoryId = null;
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "cancel-topic") {
+            state.addTopicForCategoryId = null;
+            state.editTopicId = null;
+            renderCatsScreen();
+            return;
+          }
+
+          if (action === "save-topic") {
+            const form = target.closest(".inline-form");
+            const categoryId = form.dataset.categoryId;
+            const topicId = form.dataset.topicId;
+            const input = form.querySelector('input[name="topic-name"]');
+            const name = input.value.trim();
+            if (!name) {
+              input.focus();
+              return;
+            }
+            if (topicId) {
+              const current = await dbGet("topics", topicId);
+              if (!current) return;
+              await dbPut("topics", { ...current, name });
+            } else {
+              await dbAdd("topics", {
+                id: uid(),
+                name,
+                categoryId,
+                createdAt: new Date().toISOString(),
+              });
+            }
+            state.addTopicForCategoryId = null;
+            state.editTopicId = null;
+            await loadCatsData();
+            renderCatsScreen();
+          }
+        });
+
+        document.getElementById("new-category-btn").addEventListener("click", () => {
+          state.editCategoryId = "new";
+          state.editTopicId = null;
+          state.addTopicForCategoryId = null;
+          renderCatsScreen();
+        });
+      }
+
+      function bindNavEvents() {
+        document.querySelectorAll(".nav-btn").forEach((btn) => {
+          btn.addEventListener("click", () => switchScreen(btn.dataset.screen));
+        });
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      async function start() {
+        try {
+          await dbInit();
+          await loadCatsData();
+          renderCatsScreen();
+          bindCatsEvents();
+          bindNavEvents();
+        } catch (err) {
+          console.error(err);
+          alert("Ошибка инициализации приложения. Подробности в консоли.");
+        }
+      }
+
+      start();
+    </script>
+  </body>
+</html>
