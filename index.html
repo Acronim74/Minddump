@@ -242,6 +242,121 @@
         color: var(--accent);
         border-color: var(--accent);
       }
+
+      /* Notes screen */
+      .notes-search-wrap {
+        margin-bottom: 10px;
+      }
+
+      .notes-filters {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        scrollbar-width: none;
+      }
+      .notes-filters::-webkit-scrollbar {
+        display: none;
+      }
+
+      .chip {
+        flex-shrink: 0;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--surface);
+        color: var(--text-muted);
+        padding: 5px 14px;
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .chip.active {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .note-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .note-card:hover {
+        border-color: var(--text-muted);
+      }
+      .note-no {
+        color: var(--text-muted);
+        font-size: 12px;
+        flex-shrink: 0;
+        padding-top: 2px;
+      }
+      .note-body {
+        flex: 1;
+        min-width: 0;
+      }
+      .note-title {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .note-title.done {
+        text-decoration: line-through;
+        opacity: 0.5;
+      }
+      .note-meta {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+      .note-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 4px;
+        vertical-align: middle;
+      }
+      .note-actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      /* Modal */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 20;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0 0 0 0;
+      }
+      .modal {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius) var(--radius) 0 0;
+        padding: 20px;
+        width: 100%;
+        max-width: 860px;
+      }
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+      }
+      .modal-title {
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
@@ -249,7 +364,17 @@
       <h1 class="top-title">MindDump</h1>
 
       <div id="screen-notes" class="screen">
-        <div class="placeholder">Раздел в разработке</div>
+        <div class="notes-search-wrap">
+          <input id="notes-search" class="input" placeholder="🔍 Поиск заметок..." type="search" />
+        </div>
+
+        <div id="notes-filters" class="notes-filters"></div>
+
+        <div id="notes-list"></div>
+
+        <button id="new-note-btn" class="btn accent full" type="button" style="margin-top: 12px">
+          + Новая заметка
+        </button>
       </div>
 
       <div id="screen-cats" class="screen active">
@@ -263,6 +388,22 @@
       <div id="screen-settings" class="screen">
         <div class="placeholder">Раздел в разработке</div>
       </div>
+
+      <div id="modal-overlay" class="modal-overlay" style="display: none">
+        <div class="modal">
+          <div class="modal-header">
+            <span class="modal-title">Новая заметка</span>
+            <button class="icon-btn" data-action="close-modal" type="button">✕</button>
+          </div>
+          <input class="input" id="modal-note-title" placeholder="Название заметки" />
+          <select class="input" id="modal-note-category" style="margin-top: 10px"></select>
+          <select class="input" id="modal-note-topic" style="margin-top: 10px"></select>
+          <div class="form-actions" style="margin-top: 12px">
+            <button class="btn accent" data-action="save-note" type="button">Сохранить</button>
+            <button class="btn ghost" data-action="close-modal" type="button">Отмена</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <nav id="bottom-nav">
@@ -273,7 +414,7 @@
 
     <script>
       const DB_NAME = "minddump-db";
-      const DB_VERSION = 1;
+      const DB_VERSION = 2;
 
       const CATEGORY_COLORS = [
         "#5ef5c0",
@@ -293,6 +434,9 @@
         editCategoryId: null,
         addTopicForCategoryId: null,
         editTopicId: null,
+        notes: [],
+        activeFilter: "all",
+        searchQuery: "",
       };
 
       let db = null;
@@ -308,6 +452,8 @@
           req.onerror = () => reject(req.error);
           req.onupgradeneeded = (event) => {
             const idb = event.target.result;
+            const tx = event.target.transaction;
+
             if (!idb.objectStoreNames.contains("categories")) {
               idb.createObjectStore("categories", { keyPath: "id" });
             }
@@ -315,11 +461,33 @@
               const s = idb.createObjectStore("topics", { keyPath: "id" });
               s.createIndex("categoryId", "categoryId", { unique: false });
             }
+
             if (!idb.objectStoreNames.contains("notes")) {
-              idb.createObjectStore("notes", { keyPath: "id" });
+              const ns = idb.createObjectStore("notes", { keyPath: "id" });
+              ns.createIndex("categoryId", "categoryId", { unique: false });
+              ns.createIndex("topicId", "topicId", { unique: false });
+              ns.createIndex("status", "status", { unique: false });
+            } else {
+              const ns = tx.objectStore("notes");
+              if (!ns.indexNames.contains("categoryId")) {
+                ns.createIndex("categoryId", "categoryId", { unique: false });
+              }
+              if (!ns.indexNames.contains("topicId")) {
+                ns.createIndex("topicId", "topicId", { unique: false });
+              }
+              if (!ns.indexNames.contains("status")) {
+                ns.createIndex("status", "status", { unique: false });
+              }
             }
+
             if (!idb.objectStoreNames.contains("actions")) {
-              idb.createObjectStore("actions", { keyPath: "id" });
+              const as = idb.createObjectStore("actions", { keyPath: "id" });
+              as.createIndex("noteId", "noteId", { unique: false });
+            } else {
+              const as = tx.objectStore("actions");
+              if (!as.indexNames.contains("noteId")) {
+                as.createIndex("noteId", "noteId", { unique: false });
+              }
             }
           };
           req.onsuccess = () => resolve(req.result);
@@ -381,12 +549,22 @@
         });
       }
 
-      function switchScreen(target) {
+      async function getNextNoteNo() {
+        const all = await dbGetAll("notes");
+        if (!all.length) return 1;
+        return Math.max(...all.map((n) => n.no || 0)) + 1;
+      }
+
+      async function switchScreen(target) {
         document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
         document.getElementById("screen-" + target).classList.add("active");
         document.querySelectorAll(".nav-btn").forEach((btn) => {
           btn.classList.toggle("active", btn.dataset.screen === target);
         });
+        if (target === "notes") {
+          await loadNotesData();
+          await renderNotesScreen();
+        }
       }
 
       async function loadCatsData() {
@@ -404,6 +582,174 @@
         state.topicsByCategory = map;
         categories.forEach((c) => {
           if (!state.categoryOpen.has(c.id)) state.categoryOpen.add(c.id);
+        });
+      }
+
+      async function loadNotesData() {
+        const notes = await dbGetAll("notes");
+        notes.sort((a, b) => (b.no || 0) - (a.no || 0));
+        state.notes = notes;
+      }
+
+      async function renderNotesScreen() {
+        const filtersEl = document.getElementById("notes-filters");
+        const cats = state.categories;
+        filtersEl.innerHTML = [
+          `<button type="button" class="chip ${state.activeFilter === "all" ? "active" : ""}" data-filter="all">Все</button>`,
+          ...cats.map(
+            (c) =>
+              `<button type="button" class="chip ${state.activeFilter === c.id ? "active" : ""}" data-filter="${c.id}">
+        <span class="note-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}
+       </button>`
+          ),
+          `<button type="button" class="chip ${state.activeFilter === "done" ? "active" : ""}" data-filter="done">Выполненные</button>`,
+        ].join("");
+
+        let notes = state.notes;
+        if (state.activeFilter === "done") {
+          notes = notes.filter((n) => n.status === "done");
+        } else if (state.activeFilter !== "all") {
+          notes = notes.filter((n) => n.categoryId === state.activeFilter);
+        }
+        if (state.searchQuery) {
+          const q = state.searchQuery.toLowerCase();
+          notes = notes.filter((n) => (n.title || "").toLowerCase().includes(q));
+        }
+
+        const listEl = document.getElementById("notes-list");
+        if (!notes.length) {
+          listEl.innerHTML = '<p class="muted">Заметок пока нет</p>';
+          return;
+        }
+
+        const allActions = await dbGetAll("actions");
+        const actionCount = {};
+        allActions.forEach((a) => {
+          actionCount[a.noteId] = (actionCount[a.noteId] || 0) + 1;
+        });
+
+        listEl.innerHTML = notes
+          .map((note) => {
+            const cat = state.categories.find((c) => c.id === note.categoryId);
+            const topic = state.topicsByCategory.get(note.categoryId)?.find((t) => t.id === note.topicId);
+            const dot = cat ? `<span class="note-dot" style="background:${cat.color}"></span>` : "";
+            const catName = cat ? escapeHtml(cat.name) : "";
+            const topicName = topic ? ` · ${escapeHtml(topic.name)}` : "";
+            const ac = actionCount[note.id] || 0;
+            const acText = ac
+              ? ` · ${ac} ${ac === 1 ? "действие" : ac < 5 ? "действия" : "действий"}`
+              : "";
+            const date = new Date(note.createdAt).toLocaleDateString("ru", { day: "numeric", month: "short" });
+
+            return `
+      <div class="note-card" data-note-id="${note.id}">
+        <div class="note-no">#${note.no}</div>
+        <div class="note-body">
+          <div class="note-title ${note.status === "done" ? "done" : ""}">${escapeHtml(note.title)}</div>
+          <div class="note-meta">${dot}${catName}${topicName}${acText} · ${date}</div>
+        </div>
+        <div class="note-actions">
+          <button class="icon-btn danger" data-action="delete-note" data-id="${note.id}" type="button">🗑️</button>
+        </div>
+      </div>
+    `;
+          })
+          .join("");
+      }
+
+      async function openNoteModal() {
+        const overlay = document.getElementById("modal-overlay");
+        const catSelect = document.getElementById("modal-note-category");
+        const topicSelect = document.getElementById("modal-note-topic");
+
+        catSelect.innerHTML =
+          '<option value="">— Категория —</option>' +
+          state.categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+
+        topicSelect.innerHTML = '<option value="">— Тема —</option>';
+
+        catSelect.onchange = () => {
+          const catId = catSelect.value;
+          const topics = state.topicsByCategory.get(catId) || [];
+          topicSelect.innerHTML =
+            '<option value="">— Тема —</option>' +
+            topics.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("");
+        };
+
+        document.getElementById("modal-note-title").value = "";
+        overlay.style.display = "flex";
+        document.getElementById("modal-note-title").focus();
+      }
+
+      function bindNotesEvents() {
+        document.getElementById("notes-search").addEventListener("input", async (e) => {
+          state.searchQuery = e.target.value.trim();
+          await renderNotesScreen();
+        });
+
+        document.getElementById("notes-filters").addEventListener("click", async (e) => {
+          const chip = e.target.closest(".chip");
+          if (!chip) return;
+          state.activeFilter = chip.dataset.filter;
+          await renderNotesScreen();
+        });
+
+        document.getElementById("notes-list").addEventListener("click", async (e) => {
+          const deleteBtn = e.target.closest('[data-action="delete-note"]');
+          if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
+            const note = await dbGet("notes", id);
+            if (!note) return;
+            if (!confirm(`Удалить заметку "${note.title}"?`)) return;
+            const actions = await dbGetByIndex("actions", "noteId", id);
+            for (const a of actions) await dbDelete("actions", a.id);
+            await dbDelete("notes", id);
+            await loadNotesData();
+            await renderNotesScreen();
+            return;
+          }
+          const card = e.target.closest(".note-card");
+          if (card) {
+            /* openNoteDetail(card.dataset.noteId) — этап 3 */
+          }
+        });
+
+        document.getElementById("new-note-btn").addEventListener("click", openNoteModal);
+
+        document.getElementById("modal-overlay").addEventListener("click", async (e) => {
+          const action = e.target.closest("[data-action]")?.dataset.action;
+
+          if (action === "close-modal") {
+            document.getElementById("modal-overlay").style.display = "none";
+            return;
+          }
+
+          if (action === "save-note") {
+            const title = document.getElementById("modal-note-title").value.trim();
+            const categoryId = document.getElementById("modal-note-category").value;
+            const topicId = document.getElementById("modal-note-topic").value;
+
+            if (!title) {
+              document.getElementById("modal-note-title").focus();
+              return;
+            }
+
+            const no = await getNextNoteNo();
+            await dbAdd("notes", {
+              id: uid(),
+              no,
+              title,
+              categoryId: categoryId || null,
+              topicId: topicId || null,
+              status: "open",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+
+            document.getElementById("modal-overlay").style.display = "none";
+            await loadNotesData();
+            await renderNotesScreen();
+          }
         });
       }
 
@@ -654,7 +1000,9 @@
 
       function bindNavEvents() {
         document.querySelectorAll(".nav-btn").forEach((btn) => {
-          btn.addEventListener("click", () => switchScreen(btn.dataset.screen));
+          btn.addEventListener("click", async () => {
+            await switchScreen(btn.dataset.screen);
+          });
         });
       }
 
@@ -672,6 +1020,7 @@
           await loadCatsData();
           renderCatsScreen();
           bindCatsEvents();
+          bindNotesEvents();
           bindNavEvents();
         } catch (err) {
           console.error(err);
