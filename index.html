@@ -6,7 +6,10 @@
     <meta name="theme-color" content="#0f0f13" />
     <meta name="description" content="MindDump — локальный менеджер мыслей и идей" />
     <title>MindDump</title>
-    <link rel="manifest" href="./manifest.json" />
+    <link rel="manifest" href="./manifest.json" id="pwa-manifest" />
+    <script>
+      if (location.protocol === 'file:') document.getElementById('pwa-manifest')?.remove();
+    </script>
     <link rel="stylesheet" href="./css/style.css" />
     <link rel="icon" href="./icons/icon-192.png" type="image/png" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
@@ -198,6 +201,37 @@
       </div>
     </div>
 
-    <script type="module" src="./js/app.js"></script>
+    <div id="file-protocol-warning" class="file-protocol-warning" hidden>
+      <div class="file-protocol-warning__panel">
+        <h1 class="file-protocol-warning__title">Нужен локальный сервер</h1>
+        <p>
+          Это приложение использует <strong>ES-модули</strong> и PWA. Браузер <strong>не даёт</strong> загружать их с
+          диска (<code>file://</code>) — это ограничение безопасности (CORS), а не баг MindDump.
+        </p>
+        <p>Откройте папку проекта в терминале и выполните одну из команд:</p>
+        <pre class="file-protocol-warning__code">cd путь\\к\\minddump
+npm start</pre>
+        <p>или без npm:</p>
+        <pre class="file-protocol-warning__code">npx --yes serve -l 8080 .</pre>
+        <p>Затем в браузере откройте адрес, который покажет сервер (обычно <code>http://localhost:8080</code>).</p>
+        <p class="muted">На GitHub Pages приложение уже отдаётся по HTTPS — там достаточно открыть сайт в браузере.</p>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        if (location.protocol === 'file:') {
+          var app = document.getElementById('app');
+          if (app) app.hidden = true;
+          var w = document.getElementById('file-protocol-warning');
+          if (w) w.hidden = false;
+          return;
+        }
+        var s = document.createElement('script');
+        s.type = 'module';
+        s.src = './js/app.js';
+        document.body.appendChild(s);
+      })();
+    </script>
   </body>
 </html>

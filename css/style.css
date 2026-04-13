@@ -38,6 +38,47 @@ body {
   display: none !important;
 }
 
+#app[hidden] {
+  display: none !important;
+}
+
+.file-protocol-warning {
+  min-height: 100dvh;
+  padding: 1.5rem 1rem 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.file-protocol-warning[hidden] {
+  display: none !important;
+}
+
+.file-protocol-warning__panel {
+  max-width: 36rem;
+  padding: 1.25rem 1.35rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.file-protocol-warning__title {
+  margin: 0 0 0.75rem;
+  font-size: 1.2rem;
+  color: var(--accent);
+}
+
+.file-protocol-warning__code {
+  margin: 0.5rem 0 1rem;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
 #app {
   max-width: 720px;
   margin: 0 auto;
