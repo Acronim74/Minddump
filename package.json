@@ -1,8 +1,0 @@
-{
-  "name": "minddump",
-  "private": true,
-  "description": "Локальный PWA; для разработки нужен HTTP (см. npm start)",
-  "scripts": {
-    "start": "npx --yes serve -l 8080 ."
-  }
-}
