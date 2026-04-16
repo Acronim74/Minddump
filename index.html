@@ -548,7 +548,7 @@
         min-height: 0;
       }
 
-      #screen-today {
+      #screen-today.active {
         display: flex;
         flex-direction: column;
         flex: 1;
@@ -681,7 +681,7 @@
 
   <script>
     const DB_NAME = "minddump-db";
-    const DB_VERSION = 1;
+    const DB_VERSION = 3;
     let db = null;
 
     const state = {
