@@ -1,1034 +1,1201 @@
 <!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>MindDump</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      :root {
-        --bg: #0f0f13;
-        --surface: #1a1a22;
-        --surface-2: #22222e;
-        --accent: #5ef5c0;
-        --text: #e8e8f0;
-        --text-muted: #6b6b80;
-        --danger: #f55e7a;
-        --border: #2a2a38;
-        --radius: 12px;
-      }
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MindDump</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a22;
+      --surface-2: #22222e;
+      --surface-3: #2a2a38;
+      --accent: #5ef5c0;
+      --text: #e8e8f0;
+      --text-muted: #6b6b80;
+      --danger: #f55e7a;
+      --warning: #f5a623;
+      --border: #2a2a38;
+      --radius: 14px;
+      --nav-height: 78px;
+      --day-nav-height: 54px;
+    }
 
-      * {
-        box-sizing: border-box;
-      }
+    * {
+      box-sizing: border-box;
+    }
 
-      html,
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    #main-content {
+      min-height: 100dvh;
+    }
+
+    #app {
+      min-height: 100dvh;
+      padding: 20px 16px calc(var(--nav-height) + var(--day-nav-height) + 20px);
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .today-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .today-title {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+
+    .today-date-subtitle {
+      margin-top: 6px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .add-btn {
+      width: 42px;
+      height: 42px;
+      border: none;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #0c1410;
+      font-size: 28px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .entries-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .entry-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 12px 12px 10px;
+      display: grid;
+      grid-template-columns: 20px 1fr auto auto;
+      align-items: center;
+      column-gap: 10px;
+    }
+
+    .entry-symbol {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1;
+      text-align: center;
+    }
+
+    .entry-text {
+      font-size: 15px;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+
+    .entry-action {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      border-radius: 10px;
+      min-width: 34px;
+      height: 32px;
+      cursor: pointer;
+      font-size: 15px;
+      padding: 0 8px;
+    }
+
+    .entry-item.status-done {
+      opacity: 0.45;
+    }
+
+    .entry-item.status-done .entry-text {
+      text-decoration: line-through;
+    }
+
+    .entry-item.status-migrated {
+      opacity: 0.4;
+    }
+
+    .empty-state {
+      margin-top: 30px;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 30px 12px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    .empty-state h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .empty-state p {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .placeholder {
+      margin-top: 20px;
+      min-height: 40dvh;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      background: var(--surface);
+      font-size: 16px;
+    }
+
+    #sidebar {
+      display: none;
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      flex-direction: column;
+      padding: 28px 16px;
+      height: 100dvh;
+      position: sticky;
+      top: 0;
+    }
+
+    .sidebar-logo {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 28px;
+      padding: 0 8px;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sidebar-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+    }
+
+    .sidebar-btn:hover {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    .sidebar-btn.active {
+      background: rgba(94, 245, 192, 0.08);
+      border-color: rgba(94, 245, 192, 0.25);
+      color: var(--accent);
+    }
+
+    .sidebar-icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    #day-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: var(--nav-height);
+      height: var(--day-nav-height);
+      background: rgba(15, 15, 19, 0.96);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 12px;
+      z-index: 15;
+    }
+
+    #day-nav.hidden {
+      display: none;
+    }
+
+    .day-arrow {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      border-radius: 10px;
+      width: 38px;
+      height: 34px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .day-arrow.alert {
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+
+    .day-nav-label {
+      min-width: 180px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    #bottom-nav {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--nav-height);
+      background: rgba(26, 26, 34, 0.97);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 10px 12px 12px;
+      z-index: 20;
+    }
+
+    .nav-btn {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-2);
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .nav-btn span {
+      font-size: 11px;
+      line-height: 1;
+    }
+
+    .nav-btn.active {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: #1b2823;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-sheet {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 20px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .type-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .type-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .type-btn.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(94, 245, 192, 0.06);
+    }
+
+    .modal-textarea {
+      width: 100%;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 15px;
+      resize: vertical;
+      margin-bottom: 12px;
+    }
+
+    .modal-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .modal-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .modal-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      width: 50px;
+      flex-shrink: 0;
+    }
+
+    .modal-input {
+      flex: 1;
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font: inherit;
+      font-size: 14px;
+    }
+
+    .modal-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .modal-btn-cancel {
+      padding: 9px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .modal-btn-save {
+      padding: 9px 22px;
+      border-radius: 10px;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #0c1410;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .menu-sheet {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 8px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .menu-item:hover {
+      background: var(--surface-2);
+    }
+
+    .menu-item.danger:hover {
+      background: rgba(245, 94, 122, 0.1);
+      color: var(--danger);
+    }
+
+    .menu-icon {
+      width: 20px;
+      text-align: center;
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 8px;
+    }
+
+    @media (min-width: 768px) {
       body {
-        height: 100%;
-      }
-
-      body {
-        margin: 0;
-        font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-      }
-
-      #app {
-        max-width: 860px;
-        margin: 0 auto;
-        min-height: 100dvh;
-        padding: 16px 16px 86px;
-      }
-
-      .top-title {
-        margin: 0 0 14px;
-        font-weight: 600;
-        letter-spacing: 0.2px;
-      }
-
-      .screen {
-        display: none;
-      }
-
-      .screen.active {
-        display: block;
-      }
-
-      .placeholder {
-        border: 1px dashed var(--border);
-        border-radius: var(--radius);
-        color: var(--text-muted);
-        padding: 20px;
-        background: var(--surface);
-      }
-
-      .cats-wrap {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 12px;
-      }
-
-      .cat-row {
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        margin-bottom: 10px;
-        background: var(--surface-2);
+        display: flex;
+        height: 100dvh;
         overflow: hidden;
       }
 
-      .cat-header {
+      #sidebar {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px;
       }
 
-      .accordion-btn {
-        border: 1px solid var(--border);
-        background: var(--surface);
-        color: var(--text-muted);
-        border-radius: 8px;
-        width: 28px;
-        height: 28px;
-        cursor: pointer;
-      }
-
-      .dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        flex-shrink: 0;
-      }
-
-      .cat-name {
-        font-weight: 500;
+      #main-content {
         flex: 1;
-      }
-
-      .icon-btn {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--surface);
-        color: var(--text);
-        padding: 5px 8px;
-        cursor: pointer;
-      }
-
-      .icon-btn.danger {
-        color: var(--danger);
-      }
-
-      .cat-body {
-        padding: 0 10px 10px 42px;
-      }
-
-      .topic-row {
         display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 8px;
-      }
-
-      .topic-name {
-        flex: 1;
-        color: #d6d6e4;
-      }
-
-      .btn {
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        background: var(--surface);
-        color: var(--text);
-        cursor: pointer;
-        padding: 9px 12px;
-      }
-
-      .btn.ghost {
-        background: transparent;
-      }
-
-      .btn.accent {
-        color: var(--accent);
-        border-color: var(--accent);
-      }
-
-      .btn.full {
-        width: 100%;
-      }
-
-      .btn.link {
-        padding: 0;
-        border: 0;
-        background: transparent;
-        color: var(--accent);
-      }
-
-      .inline-form {
-        margin-top: 10px;
-        padding: 10px;
-        border-radius: 10px;
-        border: 1px solid var(--border);
-        background: #15151d;
-      }
-
-      .input {
-        width: 100%;
-        background: var(--surface);
-        color: var(--text);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 10px;
-        font: inherit;
-      }
-
-      .colors {
-        margin-top: 10px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .color-btn {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        border: 2px solid transparent;
-        cursor: pointer;
-      }
-
-      .color-btn.active {
-        border-color: white;
-      }
-
-      .form-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 10px;
-      }
-
-      .muted {
-        color: var(--text-muted);
+        flex-direction: column;
+        min-height: 0;
       }
 
       #bottom-nav {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 5;
-        display: flex;
-        gap: 8px;
-        background: rgba(15, 15, 19, 0.96);
-        border-top: 1px solid var(--border);
-        padding: 10px;
-      }
-
-      .nav-btn {
-        flex: 1;
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--surface);
-        color: var(--text-muted);
-        padding: 10px 8px;
-        cursor: pointer;
-      }
-
-      .nav-btn.active {
-        color: var(--accent);
-        border-color: var(--accent);
-      }
-
-      /* Notes screen */
-      .notes-search-wrap {
-        margin-bottom: 10px;
-      }
-
-      .notes-filters {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        padding-bottom: 10px;
-        scrollbar-width: none;
-      }
-      .notes-filters::-webkit-scrollbar {
         display: none;
       }
 
-      .chip {
-        flex-shrink: 0;
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        background: var(--surface);
-        color: var(--text-muted);
-        padding: 5px 14px;
-        cursor: pointer;
-        font: inherit;
-        font-size: 13px;
-        white-space: nowrap;
-      }
-      .chip.active {
-        color: var(--accent);
-        border-color: var(--accent);
+      #day-nav {
+        position: static;
+        border-top: 1px solid var(--border);
+        background: transparent;
+        margin-top: auto;
+        padding: 12px 0 0;
       }
 
-      .note-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 12px;
-        margin-bottom: 10px;
-        cursor: pointer;
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-      }
-      .note-card:hover {
-        border-color: var(--text-muted);
-      }
-      .note-no {
-        color: var(--text-muted);
-        font-size: 12px;
-        flex-shrink: 0;
-        padding-top: 2px;
-      }
-      .note-body {
+      #app {
         flex: 1;
-        min-width: 0;
-      }
-      .note-title {
-        font-weight: 500;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .note-title.done {
-        text-decoration: line-through;
-        opacity: 0.5;
-      }
-      .note-meta {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-top: 4px;
-      }
-      .note-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 4px;
-        vertical-align: middle;
-      }
-      .note-actions {
+        overflow-y: auto;
+        padding: 28px 32px;
         display: flex;
-        gap: 6px;
-        flex-shrink: 0;
+        flex-direction: column;
+        min-height: 0;
       }
 
-      /* Modal */
+      #screen-today {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+
+      .entries-list {
+        flex: 1;
+      }
+
       .modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.7);
-        z-index: 20;
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        padding: 0 0 0 0;
-      }
-      .modal {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius) var(--radius) 0 0;
-        padding: 20px;
-        width: 100%;
-        max-width: 860px;
-      }
-      .modal-header {
-        display: flex;
         align-items: center;
-        justify-content: space-between;
-        margin-bottom: 14px;
       }
-      .modal-title {
-        font-weight: 600;
+
+      .modal-sheet {
+        border-radius: var(--radius);
       }
-    </style>
-  </head>
-  <body>
+
+      .menu-sheet {
+        border-radius: var(--radius);
+        max-width: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="sidebar-logo">MindDump</div>
+    <nav class="sidebar-nav">
+      <button class="sidebar-btn active" data-screen="today" type="button">
+        <span class="sidebar-icon">◈</span>
+        <span>Сегодня</span>
+      </button>
+      <button class="sidebar-btn" data-screen="month" type="button">
+        <span class="sidebar-icon">▦</span>
+        <span>Месяц</span>
+      </button>
+      <button class="sidebar-btn" data-screen="future" type="button">
+        <span class="sidebar-icon">⬡</span>
+        <span>Полгода</span>
+      </button>
+      <button class="sidebar-btn" data-screen="collections" type="button">
+        <span class="sidebar-icon">❑</span>
+        <span>Коллекции</span>
+      </button>
+    </nav>
+  </aside>
+
+  <div id="main-content">
     <div id="app">
-      <h1 class="top-title">MindDump</h1>
-
-      <div id="screen-notes" class="screen">
-        <div class="notes-search-wrap">
-          <input id="notes-search" class="input" placeholder="🔍 Поиск заметок..." type="search" />
-        </div>
-
-        <div id="notes-filters" class="notes-filters"></div>
-
-        <div id="notes-list"></div>
-
-        <button id="new-note-btn" class="btn accent full" type="button" style="margin-top: 12px">
-          + Новая заметка
-        </button>
-      </div>
-
-      <div id="screen-cats" class="screen active">
-        <div class="cats-wrap">
-          <div id="cats-list"></div>
-          <div id="new-category-slot"></div>
-          <button id="new-category-btn" class="btn accent full" type="button">+ Новая категория</button>
-        </div>
-      </div>
-
-      <div id="screen-settings" class="screen">
+      <div id="screen-today" class="screen active"></div>
+      <div id="screen-month" class="screen">
         <div class="placeholder">Раздел в разработке</div>
       </div>
-
-      <div id="modal-overlay" class="modal-overlay" style="display: none">
-        <div class="modal">
-          <div class="modal-header">
-            <span class="modal-title">Новая заметка</span>
-            <button class="icon-btn" data-action="close-modal" type="button">✕</button>
-          </div>
-          <input class="input" id="modal-note-title" placeholder="Название заметки" />
-          <select class="input" id="modal-note-category" style="margin-top: 10px"></select>
-          <select class="input" id="modal-note-topic" style="margin-top: 10px"></select>
-          <div class="form-actions" style="margin-top: 12px">
-            <button class="btn accent" data-action="save-note" type="button">Сохранить</button>
-            <button class="btn ghost" data-action="close-modal" type="button">Отмена</button>
-          </div>
-        </div>
+      <div id="screen-future" class="screen">
+        <div class="placeholder">Раздел в разработке</div>
+      </div>
+      <div id="screen-collections" class="screen">
+        <div class="placeholder">Раздел в разработке</div>
       </div>
     </div>
 
+    <div id="day-nav">
+      <button id="day-prev" class="day-arrow" type="button" aria-label="Предыдущий день">←</button>
+      <div id="day-nav-label" class="day-nav-label"></div>
+      <button id="day-next" class="day-arrow" type="button" aria-label="Следующий день">→</button>
+    </div>
+
     <nav id="bottom-nav">
-      <button class="nav-btn" data-screen="notes" type="button">📋 Заметки</button>
-      <button class="nav-btn active" data-screen="cats" type="button">🏷️ Категории</button>
-      <button class="nav-btn" data-screen="settings" type="button">⚙️ Настройки</button>
+      <button class="nav-btn active" data-screen="today" type="button">◈<span>Сегодня</span></button>
+      <button class="nav-btn" data-screen="month" type="button">▦<span>Месяц</span></button>
+      <button class="nav-btn" data-screen="future" type="button">⬡<span>Полгода</span></button>
+      <button class="nav-btn" data-screen="collections" type="button">❑<span>Коллекции</span></button>
     </nav>
+  </div>
 
-    <script>
-      const DB_NAME = "minddump-db";
-      const DB_VERSION = 2;
+  <div id="modal-overlay" class="modal-overlay" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Новая запись</span>
+        <button class="modal-close" id="modal-close-btn" type="button">✕</button>
+      </div>
 
-      const CATEGORY_COLORS = [
-        "#5ef5c0",
-        "#7dd3fc",
-        "#c4b5fd",
-        "#fb7185",
-        "#f59e0b",
-        "#facc15",
-        "#34d399",
-        "#60a5fa",
-      ];
+      <div class="type-selector">
+        <button class="type-btn active" data-type="task" type="button">
+          <span style="color:var(--accent)">·</span> Задача
+        </button>
+        <button class="type-btn" data-type="event" type="button">
+          <span style="color:#7dd3fc">○</span> Событие
+        </button>
+        <button class="type-btn" data-type="note" type="button">
+          <span style="color:#c4b5fd">—</span> Мысль
+        </button>
+      </div>
 
-      const state = {
-        categories: [],
-        topicsByCategory: new Map(),
-        categoryOpen: new Set(),
-        editCategoryId: null,
-        addTopicForCategoryId: null,
-        editTopicId: null,
-        notes: [],
-        activeFilter: "all",
-        searchQuery: "",
+      <textarea id="modal-text" class="modal-textarea" placeholder="Текст записи..." rows="3"></textarea>
+
+      <div class="modal-row">
+        <label class="modal-label">Дата</label>
+        <input type="date" id="modal-date" class="modal-input">
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" id="modal-cancel-btn" type="button">Отмена</button>
+        <button class="modal-btn-save" id="modal-save-btn" type="button">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="entry-menu-overlay" class="modal-overlay" style="display:none">
+    <div class="menu-sheet">
+      <div class="menu-item" id="menu-migrate">
+        <span class="menu-icon" style="color:var(--warning)">›</span>
+        Перенести на завтра
+      </div>
+      <div class="menu-item" id="menu-future">
+        <span class="menu-icon" style="color:#c4b5fd">‹</span>
+        Отложить в Полгода
+      </div>
+      <div class="menu-divider"></div>
+      <div class="menu-item" id="menu-edit">
+        <span class="menu-icon">✎</span>
+        Редактировать
+      </div>
+      <div class="menu-item danger" id="menu-delete">
+        <span class="menu-icon" style="color:var(--danger)">🗑</span>
+        Удалить
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DB_NAME = "minddump-db";
+    const DB_VERSION = 1;
+    let db = null;
+
+    const state = {
+      currentDate: todayStr()
+    };
+    let activeMenuEntryId = null;
+
+    function uid() {
+      return crypto.randomUUID();
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function todayStr() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      return year + "-" + month + "-" + day;
+    }
+
+    function addDays(dateStr, daysDelta) {
+      const date = new Date(dateStr + "T00:00:00");
+      date.setDate(date.getDate() + daysDelta);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return year + "-" + month + "-" + day;
+    }
+
+    function formatDate(dateStr) {
+      const date = new Date(dateStr + "T00:00:00");
+      return new Intl.DateTimeFormat("ru-RU", {
+        day: "numeric",
+        month: "long",
+        weekday: "long"
+      }).format(date);
+    }
+
+    function formatNavDate(dateStr) {
+      const date = new Date(dateStr + "T00:00:00");
+      return new Intl.DateTimeFormat("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      }).format(date);
+    }
+
+    async function dbInit() {
+      if (db) return db;
+
+      db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = function () {
+          const database = request.result;
+
+          if (!database.objectStoreNames.contains("entries")) {
+            const entriesStore = database.createObjectStore("entries", { keyPath: "id" });
+            entriesStore.createIndex("date", "date", { unique: false });
+            entriesStore.createIndex("status", "status", { unique: false });
+            entriesStore.createIndex("collectionId", "collectionId", { unique: false });
+          }
+
+          if (!database.objectStoreNames.contains("collections")) {
+            database.createObjectStore("collections", { keyPath: "id" });
+          }
+        };
+
+        request.onsuccess = function () {
+          resolve(request.result);
+        };
+
+        request.onerror = function () {
+          reject(request.error);
+        };
+      });
+
+      return db;
+    }
+
+    async function dbAdd(store, obj) {
+      await dbInit();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readwrite");
+        const os = tx.objectStore(store);
+        const req = os.add(obj);
+        req.onsuccess = function () {
+          resolve(req.result);
+        };
+        req.onerror = function () {
+          reject(req.error);
+        };
+      });
+    }
+
+    async function dbGetAll(store) {
+      await dbInit();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readonly");
+        const os = tx.objectStore(store);
+        const req = os.getAll();
+        req.onsuccess = function () {
+          resolve(req.result || []);
+        };
+        req.onerror = function () {
+          reject(req.error);
+        };
+      });
+    }
+
+    async function dbGet(store, id) {
+      await dbInit();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readonly");
+        const os = tx.objectStore(store);
+        const req = os.get(id);
+        req.onsuccess = function () {
+          resolve(req.result || null);
+        };
+        req.onerror = function () {
+          reject(req.error);
+        };
+      });
+    }
+
+    async function dbPut(store, obj) {
+      await dbInit();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readwrite");
+        const os = tx.objectStore(store);
+        const req = os.put(obj);
+        req.onsuccess = function () {
+          resolve(req.result);
+        };
+        req.onerror = function () {
+          reject(req.error);
+        };
+      });
+    }
+
+    async function dbDelete(store, id) {
+      await dbInit();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readwrite");
+        const os = tx.objectStore(store);
+        const req = os.delete(id);
+        req.onsuccess = function () {
+          resolve(true);
+        };
+        req.onerror = function () {
+          reject(req.error);
+        };
+      });
+    }
+
+    async function dbGetByIndex(store, indexName, value) {
+      await dbInit();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, "readonly");
+        const os = tx.objectStore(store);
+        const idx = os.index(indexName);
+        const req = idx.getAll(value);
+        req.onsuccess = function () {
+          resolve(req.result || []);
+        };
+        req.onerror = function () {
+          reject(req.error);
+        };
+      });
+    }
+
+    function getSymbolByEntry(entry) {
+      if (entry.status === "done") {
+        return { char: "×", color: "var(--text-muted)" };
+      }
+      if (entry.status === "migrated") {
+        return { char: "›", color: "var(--warning)" };
+      }
+      if (entry.type === "event") {
+        return { char: "○", color: "#7dd3fc" };
+      }
+      if (entry.type === "note") {
+        return { char: "—", color: "#c4b5fd" };
+      }
+      return { char: "·", color: "var(--accent)" };
+    }
+
+    async function hasOpenOnDate(dateStr) {
+      const dayEntries = await dbGetByIndex("entries", "date", dateStr);
+      return dayEntries.some(function (item) {
+        return item.status === "open";
+      });
+    }
+
+    async function renderTodayScreen() {
+      const screen = document.getElementById("screen-today");
+      const list = await dbGetByIndex("entries", "date", state.currentDate);
+
+      list.sort(function (a, b) {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+
+      const rowsHtml = list.map(function (entry) {
+        const sym = getSymbolByEntry(entry);
+        const statusClass = entry.status ? "status-" + entry.status : "status-open";
+        return (
+          '<div class="entry-item ' + statusClass + '" data-id="' + entry.id + '">' +
+            '<span class="entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
+            '<span class="entry-text">' + escapeHtml(entry.text) + "</span>" +
+            '<button type="button" class="entry-action js-toggle-done">✓</button>' +
+            '<button type="button" class="entry-action js-entry-menu">···</button>' +
+          "</div>"
+        );
+      }).join("");
+
+      const emptyHtml =
+        '<div class="empty-state">' +
+          "<h3>Нет записей на сегодня</h3>" +
+          "<p>Нажмите + чтобы добавить первую</p>" +
+        "</div>";
+
+      screen.innerHTML =
+        '<header class="today-header">' +
+          "<div>" +
+            '<h1 class="today-title">Сегодня</h1>' +
+            '<div class="today-date-subtitle">' + escapeHtml(formatDate(state.currentDate)) + "</div>" +
+          "</div>" +
+          '<button class="add-btn" id="today-add-btn" type="button" aria-label="Добавить запись">+</button>' +
+        "</header>" +
+        '<section class="entries-list">' + (rowsHtml || emptyHtml) + "</section>";
+
+      bindTodayActions();
+      renderDayNav();
+    }
+
+    function bindTodayActions() {
+      const addBtn = document.getElementById("today-add-btn");
+      if (addBtn) {
+        addBtn.onclick = function () {
+          openModal(state.currentDate);
+        };
+      }
+
+      const toggleButtons = document.querySelectorAll(".js-toggle-done");
+      toggleButtons.forEach(function (button) {
+        button.onclick = async function (event) {
+          const row = event.currentTarget.closest(".entry-item");
+          if (!row) return;
+          const entryId = row.getAttribute("data-id");
+          const entry = await dbGet("entries", entryId);
+          if (!entry) return;
+          entry.status = entry.status === "done" ? "open" : "done";
+          entry.updatedAt = new Date().toISOString();
+          await dbPut("entries", entry);
+          await renderTodayScreen();
+        };
+      });
+
+      const menuButtons = document.querySelectorAll(".js-entry-menu");
+      menuButtons.forEach(function (button) {
+        button.onclick = function (event) {
+          const row = event.currentTarget.closest(".entry-item");
+          if (!row) return;
+          openEntryMenu(row.getAttribute("data-id"));
+        };
+      });
+    }
+
+    async function renderDayNav() {
+      const label = document.getElementById("day-nav-label");
+      const prevBtn = document.getElementById("day-prev");
+      if (label) {
+        label.textContent = formatNavDate(state.currentDate);
+      }
+      if (prevBtn) {
+        const previousDate = addDays(state.currentDate, -1);
+        const hasOpen = await hasOpenOnDate(previousDate);
+        prevBtn.classList.toggle("alert", hasOpen);
+      }
+    }
+
+    function bindDayNavEvents() {
+      const prevBtn = document.getElementById("day-prev");
+      const nextBtn = document.getElementById("day-next");
+
+      prevBtn.addEventListener("click", async function () {
+        state.currentDate = addDays(state.currentDate, -1);
+        await renderTodayScreen();
+      });
+
+      nextBtn.addEventListener("click", async function () {
+        state.currentDate = addDays(state.currentDate, 1);
+        await renderTodayScreen();
+      });
+    }
+
+    function bindNavEvents() {
+      const navButtons = document.querySelectorAll(".nav-btn, .sidebar-btn");
+      const screens = {
+        today: document.getElementById("screen-today"),
+        month: document.getElementById("screen-month"),
+        future: document.getElementById("screen-future"),
+        collections: document.getElementById("screen-collections")
       };
+      const dayNav = document.getElementById("day-nav");
 
-      let db = null;
-
-      function uid() {
-        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-        return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 9);
-      }
-
-      async function dbInit() {
-        db = await new Promise((resolve, reject) => {
-          const req = indexedDB.open(DB_NAME, DB_VERSION);
-          req.onerror = () => reject(req.error);
-          req.onupgradeneeded = (event) => {
-            const idb = event.target.result;
-            const tx = event.target.transaction;
-
-            if (!idb.objectStoreNames.contains("categories")) {
-              idb.createObjectStore("categories", { keyPath: "id" });
-            }
-            if (!idb.objectStoreNames.contains("topics")) {
-              const s = idb.createObjectStore("topics", { keyPath: "id" });
-              s.createIndex("categoryId", "categoryId", { unique: false });
-            }
-
-            if (!idb.objectStoreNames.contains("notes")) {
-              const ns = idb.createObjectStore("notes", { keyPath: "id" });
-              ns.createIndex("categoryId", "categoryId", { unique: false });
-              ns.createIndex("topicId", "topicId", { unique: false });
-              ns.createIndex("status", "status", { unique: false });
-            } else {
-              const ns = tx.objectStore("notes");
-              if (!ns.indexNames.contains("categoryId")) {
-                ns.createIndex("categoryId", "categoryId", { unique: false });
-              }
-              if (!ns.indexNames.contains("topicId")) {
-                ns.createIndex("topicId", "topicId", { unique: false });
-              }
-              if (!ns.indexNames.contains("status")) {
-                ns.createIndex("status", "status", { unique: false });
-              }
-            }
-
-            if (!idb.objectStoreNames.contains("actions")) {
-              const as = idb.createObjectStore("actions", { keyPath: "id" });
-              as.createIndex("noteId", "noteId", { unique: false });
-            } else {
-              const as = tx.objectStore("actions");
-              if (!as.indexNames.contains("noteId")) {
-                as.createIndex("noteId", "noteId", { unique: false });
-              }
-            }
-          };
-          req.onsuccess = () => resolve(req.result);
+      navButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+          const target = button.getAttribute("data-screen");
+          navButtons.forEach(function (btn) {
+            btn.classList.toggle("active", btn.getAttribute("data-screen") === target);
+          });
+          Object.keys(screens).forEach(function (key) {
+            screens[key].classList.toggle("active", key === target);
+          });
+          dayNav.classList.toggle("hidden", target !== "today");
         });
-      }
+      });
+    }
 
-      async function dbAdd(store, obj) {
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(store, "readwrite");
-          const req = tx.objectStore(store).add(obj);
-          req.onsuccess = () => resolve(obj);
-          req.onerror = () => reject(req.error);
+    function openModal(defaultDate) {
+      const overlay = document.getElementById("modal-overlay");
+      document.getElementById("modal-text").value = "";
+      document.getElementById("modal-date").value = defaultDate || state.currentDate;
+      document.querySelectorAll(".type-btn").forEach(function (btn) {
+        btn.classList.toggle("active", btn.dataset.type === "task");
+      });
+      overlay.style.display = "flex";
+      setTimeout(function () {
+        document.getElementById("modal-text").focus();
+      }, 50);
+    }
+
+    function closeModal() {
+      document.getElementById("modal-overlay").style.display = "none";
+    }
+
+    function bindModalEvents() {
+      document.querySelectorAll(".type-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll(".type-btn").forEach(function (innerBtn) {
+            innerBtn.classList.remove("active");
+          });
+          btn.classList.add("active");
         });
-      }
+      });
 
-      async function dbGetAll(store) {
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(store, "readonly");
-          const req = tx.objectStore(store).getAll();
-          req.onsuccess = () => resolve(req.result || []);
-          req.onerror = () => reject(req.error);
-        });
-      }
-
-      async function dbGet(store, id) {
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(store, "readonly");
-          const req = tx.objectStore(store).get(id);
-          req.onsuccess = () => resolve(req.result || null);
-          req.onerror = () => reject(req.error);
-        });
-      }
-
-      async function dbPut(store, obj) {
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(store, "readwrite");
-          const req = tx.objectStore(store).put(obj);
-          req.onsuccess = () => resolve(obj);
-          req.onerror = () => reject(req.error);
-        });
-      }
-
-      async function dbDelete(store, id) {
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(store, "readwrite");
-          const req = tx.objectStore(store).delete(id);
-          req.onsuccess = () => resolve();
-          req.onerror = () => reject(req.error);
-        });
-      }
-
-      async function dbGetByIndex(store, indexName, value) {
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(store, "readonly");
-          const idx = tx.objectStore(store).index(indexName);
-          const req = idx.getAll(value);
-          req.onsuccess = () => resolve(req.result || []);
-          req.onerror = () => reject(req.error);
-        });
-      }
-
-      async function getNextNoteNo() {
-        const all = await dbGetAll("notes");
-        if (!all.length) return 1;
-        return Math.max(...all.map((n) => n.no || 0)) + 1;
-      }
-
-      async function switchScreen(target) {
-        document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
-        document.getElementById("screen-" + target).classList.add("active");
-        document.querySelectorAll(".nav-btn").forEach((btn) => {
-          btn.classList.toggle("active", btn.dataset.screen === target);
-        });
-        if (target === "notes") {
-          await loadNotesData();
-          await renderNotesScreen();
-        }
-      }
-
-      async function loadCatsData() {
-        const categories = await dbGetAll("categories");
-        categories.sort((a, b) => a.name.localeCompare(b.name, "ru"));
-        const topics = await dbGetAll("topics");
-        const map = new Map();
-        categories.forEach((c) => map.set(c.id, []));
-        topics.forEach((t) => {
-          if (!map.has(t.categoryId)) map.set(t.categoryId, []);
-          map.get(t.categoryId).push(t);
-        });
-        map.forEach((arr) => arr.sort((a, b) => a.name.localeCompare(b.name, "ru")));
-        state.categories = categories;
-        state.topicsByCategory = map;
-        categories.forEach((c) => {
-          if (!state.categoryOpen.has(c.id)) state.categoryOpen.add(c.id);
-        });
-      }
-
-      async function loadNotesData() {
-        const notes = await dbGetAll("notes");
-        notes.sort((a, b) => (b.no || 0) - (a.no || 0));
-        state.notes = notes;
-      }
-
-      async function renderNotesScreen() {
-        const filtersEl = document.getElementById("notes-filters");
-        const cats = state.categories;
-        filtersEl.innerHTML = [
-          `<button type="button" class="chip ${state.activeFilter === "all" ? "active" : ""}" data-filter="all">Все</button>`,
-          ...cats.map(
-            (c) =>
-              `<button type="button" class="chip ${state.activeFilter === c.id ? "active" : ""}" data-filter="${c.id}">
-        <span class="note-dot" style="background:${c.color}"></span>${escapeHtml(c.name)}
-       </button>`
-          ),
-          `<button type="button" class="chip ${state.activeFilter === "done" ? "active" : ""}" data-filter="done">Выполненные</button>`,
-        ].join("");
-
-        let notes = state.notes;
-        if (state.activeFilter === "done") {
-          notes = notes.filter((n) => n.status === "done");
-        } else if (state.activeFilter !== "all") {
-          notes = notes.filter((n) => n.categoryId === state.activeFilter);
-        }
-        if (state.searchQuery) {
-          const q = state.searchQuery.toLowerCase();
-          notes = notes.filter((n) => (n.title || "").toLowerCase().includes(q));
-        }
-
-        const listEl = document.getElementById("notes-list");
-        if (!notes.length) {
-          listEl.innerHTML = '<p class="muted">Заметок пока нет</p>';
+      document.getElementById("modal-close-btn").addEventListener("click", closeModal);
+      document.getElementById("modal-cancel-btn").addEventListener("click", closeModal);
+      document.getElementById("modal-overlay").addEventListener("click", function (event) {
+        if (event.target === this) closeModal();
+      });
+      document.getElementById("modal-save-btn").addEventListener("click", async function () {
+        const text = document.getElementById("modal-text").value.trim();
+        if (!text) {
+          document.getElementById("modal-text").focus();
           return;
         }
 
-        const allActions = await dbGetAll("actions");
-        const actionCount = {};
-        allActions.forEach((a) => {
-          actionCount[a.noteId] = (actionCount[a.noteId] || 0) + 1;
+        const type = (document.querySelector(".type-btn.active") || {}).dataset.type || "task";
+        const date = document.getElementById("modal-date").value || state.currentDate;
+        const now = new Date().toISOString();
+        await dbAdd("entries", {
+          id: uid(),
+          date: date,
+          type: type,
+          text: text,
+          status: "open",
+          collectionId: null,
+          createdAt: now,
+          updatedAt: now
         });
+        closeModal();
+        await renderTodayScreen();
+      });
 
-        listEl.innerHTML = notes
-          .map((note) => {
-            const cat = state.categories.find((c) => c.id === note.categoryId);
-            const topic = state.topicsByCategory.get(note.categoryId)?.find((t) => t.id === note.topicId);
-            const dot = cat ? `<span class="note-dot" style="background:${cat.color}"></span>` : "";
-            const catName = cat ? escapeHtml(cat.name) : "";
-            const topicName = topic ? ` · ${escapeHtml(topic.name)}` : "";
-            const ac = actionCount[note.id] || 0;
-            const acText = ac
-              ? ` · ${ac} ${ac === 1 ? "действие" : ac < 5 ? "действия" : "действий"}`
-              : "";
-            const date = new Date(note.createdAt).toLocaleDateString("ru", { day: "numeric", month: "short" });
-
-            return `
-      <div class="note-card" data-note-id="${note.id}">
-        <div class="note-no">#${note.no}</div>
-        <div class="note-body">
-          <div class="note-title ${note.status === "done" ? "done" : ""}">${escapeHtml(note.title)}</div>
-          <div class="note-meta">${dot}${catName}${topicName}${acText} · ${date}</div>
-        </div>
-        <div class="note-actions">
-          <button class="icon-btn danger" data-action="delete-note" data-id="${note.id}" type="button">🗑️</button>
-        </div>
-      </div>
-    `;
-          })
-          .join("");
-      }
-
-      async function openNoteModal() {
-        const overlay = document.getElementById("modal-overlay");
-        const catSelect = document.getElementById("modal-note-category");
-        const topicSelect = document.getElementById("modal-note-topic");
-
-        catSelect.innerHTML =
-          '<option value="">— Категория —</option>' +
-          state.categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
-
-        topicSelect.innerHTML = '<option value="">— Тема —</option>';
-
-        catSelect.onchange = () => {
-          const catId = catSelect.value;
-          const topics = state.topicsByCategory.get(catId) || [];
-          topicSelect.innerHTML =
-            '<option value="">— Тема —</option>' +
-            topics.map((t) => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("");
-        };
-
-        document.getElementById("modal-note-title").value = "";
-        overlay.style.display = "flex";
-        document.getElementById("modal-note-title").focus();
-      }
-
-      function bindNotesEvents() {
-        document.getElementById("notes-search").addEventListener("input", async (e) => {
-          state.searchQuery = e.target.value.trim();
-          await renderNotesScreen();
-        });
-
-        document.getElementById("notes-filters").addEventListener("click", async (e) => {
-          const chip = e.target.closest(".chip");
-          if (!chip) return;
-          state.activeFilter = chip.dataset.filter;
-          await renderNotesScreen();
-        });
-
-        document.getElementById("notes-list").addEventListener("click", async (e) => {
-          const deleteBtn = e.target.closest('[data-action="delete-note"]');
-          if (deleteBtn) {
-            const id = deleteBtn.dataset.id;
-            const note = await dbGet("notes", id);
-            if (!note) return;
-            if (!confirm(`Удалить заметку "${note.title}"?`)) return;
-            const actions = await dbGetByIndex("actions", "noteId", id);
-            for (const a of actions) await dbDelete("actions", a.id);
-            await dbDelete("notes", id);
-            await loadNotesData();
-            await renderNotesScreen();
-            return;
-          }
-          const card = e.target.closest(".note-card");
-          if (card) {
-            /* openNoteDetail(card.dataset.noteId) — этап 3 */
-          }
-        });
-
-        document.getElementById("new-note-btn").addEventListener("click", openNoteModal);
-
-        document.getElementById("modal-overlay").addEventListener("click", async (e) => {
-          const action = e.target.closest("[data-action]")?.dataset.action;
-
-          if (action === "close-modal") {
-            document.getElementById("modal-overlay").style.display = "none";
-            return;
-          }
-
-          if (action === "save-note") {
-            const title = document.getElementById("modal-note-title").value.trim();
-            const categoryId = document.getElementById("modal-note-category").value;
-            const topicId = document.getElementById("modal-note-topic").value;
-
-            if (!title) {
-              document.getElementById("modal-note-title").focus();
-              return;
-            }
-
-            const no = await getNextNoteNo();
-            await dbAdd("notes", {
-              id: uid(),
-              no,
-              title,
-              categoryId: categoryId || null,
-              topicId: topicId || null,
-              status: "open",
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-
-            document.getElementById("modal-overlay").style.display = "none";
-            await loadNotesData();
-            await renderNotesScreen();
-          }
-        });
-      }
-
-      function renderColorPicker(selectedColor) {
-        return `
-          <div class="colors">
-            ${CATEGORY_COLORS.map((c) => {
-              const active = c.toLowerCase() === selectedColor.toLowerCase() ? "active" : "";
-              return `<button type="button" class="color-btn ${active}" data-color="${c}" style="background:${c}"></button>`;
-            }).join("")}
-          </div>
-        `;
-      }
-
-      function renderCategoryInlineForm(category) {
-        const isEdit = Boolean(category);
-        const name = category ? category.name : "";
-        const color = category ? category.color : CATEGORY_COLORS[0];
-        return `
-          <div class="inline-form" data-form-type="${isEdit ? "edit-category" : "new-category"}" data-id="${category ? category.id : ""}">
-            <input class="input" name="name" placeholder="Название категории" value="${escapeHtml(name)}" />
-            ${renderColorPicker(color)}
-            <div class="form-actions">
-              <button class="btn accent" data-action="save-category" type="button">Сохранить</button>
-              <button class="btn ghost" data-action="cancel-category" type="button">Отмена</button>
-            </div>
-          </div>
-        `;
-      }
-
-      function renderTopicInlineForm(categoryId, topic) {
-        const isEdit = Boolean(topic);
-        return `
-          <div class="inline-form" data-form-type="${isEdit ? "edit-topic" : "new-topic"}" data-category-id="${categoryId}" data-topic-id="${topic ? topic.id : ""}">
-            <input class="input" name="topic-name" placeholder="Название темы" value="${escapeHtml(topic ? topic.name : "")}" />
-            <div class="form-actions">
-              <button class="btn accent" data-action="save-topic" type="button">Сохранить</button>
-              <button class="btn ghost" data-action="cancel-topic" type="button">Отмена</button>
-            </div>
-          </div>
-        `;
-      }
-
-      function renderCatsScreen() {
-        const list = document.getElementById("cats-list");
-        const newCatSlot = document.getElementById("new-category-slot");
-        const rows = state.categories
-          .map((cat) => {
-            const isOpen = state.categoryOpen.has(cat.id);
-            const topics = state.topicsByCategory.get(cat.id) || [];
-            const isEditingCat = state.editCategoryId === cat.id;
-
-            const topicsHtml = topics
-              .map((topic) => {
-                const isEditingTopic = state.editTopicId === topic.id;
-                return `
-                  <div class="topic-row">
-                    ${isEditingTopic
-                      ? renderTopicInlineForm(cat.id, topic)
-                      : `<div class="topic-name">├─ ${escapeHtml(topic.name)}</div>
-                         <button class="icon-btn" data-action="edit-topic" data-id="${topic.id}" type="button">✏️</button>
-                         <button class="icon-btn danger" data-action="delete-topic" data-id="${topic.id}" type="button">🗑️</button>`}
-                  </div>
-                `;
-              })
-              .join("");
-
-            const addTopicOpen = state.addTopicForCategoryId === cat.id;
-            return `
-              <div class="cat-row">
-                <div class="cat-header">
-                  <button class="accordion-btn" data-action="toggle-cat" data-id="${cat.id}" type="button">${isOpen ? "▾" : "▸"}</button>
-                  <span class="dot" style="background:${cat.color}"></span>
-                  ${
-                    isEditingCat
-                      ? `<div style="flex:1">${renderCategoryInlineForm(cat)}</div>`
-                      : `<div class="cat-name">${escapeHtml(cat.name)}</div>
-                         <button class="icon-btn" data-action="edit-cat" data-id="${cat.id}" type="button">✏️</button>
-                         <button class="icon-btn danger" data-action="delete-cat" data-id="${cat.id}" type="button">🗑️</button>`
-                  }
-                </div>
-                ${isOpen ? `<div class="cat-body">${topicsHtml}
-                  ${addTopicOpen ? renderTopicInlineForm(cat.id, null) : ""}
-                  <div style="margin-top:8px">
-                    <button class="btn link" data-action="add-topic" data-id="${cat.id}" type="button">+ Добавить тему</button>
-                  </div>
-                </div>` : ""}
-              </div>
-            `;
-          })
-          .join("");
-        list.innerHTML = rows || `<p class="muted">Категорий пока нет</p>`;
-        newCatSlot.innerHTML = state.editCategoryId === "new" ? renderCategoryInlineForm(null) : "";
-      }
-
-      function bindCatsEvents() {
-        const catsRoot = document.getElementById("screen-cats");
-
-        catsRoot.addEventListener("click", async (e) => {
-          const target = e.target.closest("[data-action]");
-          if (!target) {
-            const colorBtn = e.target.closest(".color-btn");
-            if (colorBtn) {
-              const form = colorBtn.closest(".inline-form");
-              form.querySelectorAll(".color-btn").forEach((b) => b.classList.remove("active"));
-              colorBtn.classList.add("active");
-            }
-            return;
-          }
-
-          const action = target.dataset.action;
-          const id = target.dataset.id;
-
-          if (action === "toggle-cat") {
-            if (state.categoryOpen.has(id)) state.categoryOpen.delete(id);
-            else state.categoryOpen.add(id);
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "edit-cat") {
-            state.editCategoryId = id;
-            state.editTopicId = null;
-            state.addTopicForCategoryId = null;
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "delete-cat") {
-            const cat = await dbGet("categories", id);
-            if (!cat) return;
-            if (!confirm(`Удалить категорию "${cat.name}" и все её темы?`)) return;
-            const topics = await dbGetByIndex("topics", "categoryId", id);
-            for (const t of topics) await dbDelete("topics", t.id);
-            await dbDelete("categories", id);
-            state.editCategoryId = null;
-            state.addTopicForCategoryId = null;
-            state.editTopicId = null;
-            await loadCatsData();
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "add-topic") {
-            state.addTopicForCategoryId = id;
-            state.editTopicId = null;
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "edit-topic") {
-            state.editTopicId = id;
-            state.addTopicForCategoryId = null;
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "delete-topic") {
-            const topic = await dbGet("topics", id);
-            if (!topic) return;
-            if (!confirm(`Удалить тему "${topic.name}"?`)) return;
-            await dbDelete("topics", id);
-            state.editTopicId = null;
-            await loadCatsData();
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "cancel-category") {
-            state.editCategoryId = null;
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "save-category") {
-            const form = target.closest(".inline-form");
-            const idFromForm = form.dataset.id;
-            const input = form.querySelector('input[name="name"]');
-            const activeColorBtn = form.querySelector(".color-btn.active");
-            const name = input.value.trim();
-            if (!name) {
-              input.focus();
-              return;
-            }
-            const color = activeColorBtn ? activeColorBtn.dataset.color : CATEGORY_COLORS[0];
-            if (idFromForm) {
-              const current = await dbGet("categories", idFromForm);
-              if (!current) return;
-              await dbPut("categories", { ...current, name, color });
-            } else {
-              await dbAdd("categories", {
-                id: uid(),
-                name,
-                color,
-                createdAt: new Date().toISOString(),
-              });
-              state.editCategoryId = null;
-            }
-            await loadCatsData();
-            state.editCategoryId = null;
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "cancel-topic") {
-            state.addTopicForCategoryId = null;
-            state.editTopicId = null;
-            renderCatsScreen();
-            return;
-          }
-
-          if (action === "save-topic") {
-            const form = target.closest(".inline-form");
-            const categoryId = form.dataset.categoryId;
-            const topicId = form.dataset.topicId;
-            const input = form.querySelector('input[name="topic-name"]');
-            const name = input.value.trim();
-            if (!name) {
-              input.focus();
-              return;
-            }
-            if (topicId) {
-              const current = await dbGet("topics", topicId);
-              if (!current) return;
-              await dbPut("topics", { ...current, name });
-            } else {
-              await dbAdd("topics", {
-                id: uid(),
-                name,
-                categoryId,
-                createdAt: new Date().toISOString(),
-              });
-            }
-            state.addTopicForCategoryId = null;
-            state.editTopicId = null;
-            await loadCatsData();
-            renderCatsScreen();
-          }
-        });
-
-        document.getElementById("new-category-btn").addEventListener("click", () => {
-          state.editCategoryId = "new";
-          state.editTopicId = null;
-          state.addTopicForCategoryId = null;
-          renderCatsScreen();
-        });
-      }
-
-      function bindNavEvents() {
-        document.querySelectorAll(".nav-btn").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            await switchScreen(btn.dataset.screen);
-          });
-        });
-      }
-
-      function escapeHtml(s) {
-        return String(s)
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;");
-      }
-
-      async function start() {
-        try {
-          await dbInit();
-          await loadCatsData();
-          renderCatsScreen();
-          bindCatsEvents();
-          bindNotesEvents();
-          bindNavEvents();
-        } catch (err) {
-          console.error(err);
-          alert("Ошибка инициализации приложения. Подробности в консоли.");
+      document.getElementById("modal-text").addEventListener("keydown", function (event) {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+          document.getElementById("modal-save-btn").click();
         }
-      }
+        if (event.key === "Escape") closeModal();
+      });
+    }
 
-      start();
-    </script>
-  </body>
+    function openEntryMenu(entryId) {
+      activeMenuEntryId = entryId;
+      document.getElementById("entry-menu-overlay").style.display = "flex";
+    }
+
+    function closeEntryMenu() {
+      activeMenuEntryId = null;
+      document.getElementById("entry-menu-overlay").style.display = "none";
+    }
+
+    function bindEntryMenuEvents() {
+      document.getElementById("entry-menu-overlay").addEventListener("click", function (event) {
+        if (event.target === this) closeEntryMenu();
+      });
+
+      document.getElementById("menu-migrate").addEventListener("click", async function () {
+        if (!activeMenuEntryId) return;
+        const entry = await dbGet("entries", activeMenuEntryId);
+        if (!entry) return;
+        entry.date = addDays(entry.date, 1);
+        entry.status = "migrated";
+        entry.updatedAt = new Date().toISOString();
+        await dbPut("entries", entry);
+        closeEntryMenu();
+        await renderTodayScreen();
+      });
+
+      document.getElementById("menu-future").addEventListener("click", async function () {
+        if (!activeMenuEntryId) return;
+        const entry = await dbGet("entries", activeMenuEntryId);
+        if (!entry) return;
+        entry.status = "future";
+        entry.updatedAt = new Date().toISOString();
+        await dbPut("entries", entry);
+        closeEntryMenu();
+        await renderTodayScreen();
+      });
+
+      document.getElementById("menu-edit").addEventListener("click", function () {
+        closeEntryMenu();
+        alert("Редактирование — следующий этап");
+      });
+
+      document.getElementById("menu-delete").addEventListener("click", async function () {
+        if (!activeMenuEntryId) return;
+        if (!confirm("Удалить запись?")) return;
+        await dbDelete("entries", activeMenuEntryId);
+        closeEntryMenu();
+        await renderTodayScreen();
+      });
+    }
+
+    async function seedDemoDataIfNeeded() {
+      const allEntries = await dbGetAll("entries");
+      if (allEntries.length > 0) return;
+
+      const nowIso = new Date().toISOString();
+      const today = todayStr();
+      const yesterday = addDays(today, -1);
+
+      const demo = [
+        {
+          id: uid(),
+          date: today,
+          type: "task",
+          text: "Позвонить врачу",
+          status: "open",
+          collectionId: null,
+          createdAt: nowIso,
+          updatedAt: nowIso
+        },
+        {
+          id: uid(),
+          date: today,
+          type: "event",
+          text: "Встреча с командой",
+          status: "open",
+          collectionId: null,
+          createdAt: new Date(Date.now() + 1000).toISOString(),
+          updatedAt: new Date(Date.now() + 1000).toISOString()
+        },
+        {
+          id: uid(),
+          date: today,
+          type: "note",
+          text: "Идея про рабочее место",
+          status: "done",
+          collectionId: null,
+          createdAt: new Date(Date.now() + 2000).toISOString(),
+          updatedAt: new Date(Date.now() + 2000).toISOString()
+        },
+        {
+          id: uid(),
+          date: yesterday,
+          type: "task",
+          text: "Отправить отчет",
+          status: "open",
+          collectionId: null,
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+          updatedAt: new Date(Date.now() - 86400000).toISOString()
+        }
+      ];
+
+      for (const item of demo) {
+        await dbAdd("entries", item);
+      }
+    }
+
+    async function start() {
+      await dbInit();
+      await seedDemoDataIfNeeded();
+      bindDayNavEvents();
+      bindNavEvents();
+      bindModalEvents();
+      bindEntryMenuEvents();
+      await renderTodayScreen();
+    }
+
+    start().catch(function (error) {
+      console.error("Ошибка запуска приложения:", error);
+      alert("Ошибка запуска приложения. Откройте консоль браузера.");
+    });
+  </script>
+</body>
 </html>
