@@ -320,9 +320,9 @@
       background: rgba(26, 26, 34, 0.97);
       border-top: 1px solid var(--border);
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      padding: 10px 12px 12px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      padding: 10px 10px 12px;
       z-index: 20;
     }
 

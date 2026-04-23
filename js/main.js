@@ -35,7 +35,7 @@
           id: uid(),
           date: today,
           type: "note",
-          text: "Идея про рабочее место",
+          text: "Заметка про рабочее место",
           status: "open",
           priority: "insight",
           raised: false,

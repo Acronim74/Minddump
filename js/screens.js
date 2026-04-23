@@ -232,7 +232,7 @@
         }).join("");
       }
 
-      // В блок «Идеи месяца» попадают только note, явно поднятые (raised=true).
+      // В блок «Заметки месяца» попадают только note, явно поднятые (raised=true).
       const ideas = monthEntries.filter(function (e) {
         return e.type === "note" && e.raised;
       });
@@ -315,7 +315,7 @@
           "</div>" +
           '<div class="migration-banner-meta">Незакрытых: ' +
           unclosedTasks.length +
-          " · Идей без коллекции: " +
+          " · Заметок без коллекции: " +
           looseIdeas.length +
           "</div>" +
         "</div>" +
@@ -372,7 +372,7 @@
         }
 
         if (action === "forget") {
-          if (!confirm("Удалить идею?")) return;
+          if (!confirm("Удалить заметку?")) return;
           await dbDelete("entries", id);
           await renderMonthScreen();
         }
