@@ -18,16 +18,19 @@
 
       listEl.innerHTML = collections
         .map(function (coll) {
-          const entries = allEntries.filter(function (e) {
-            return e.collectionId === coll.id && e.status !== "done";
+          // В V1 в коллекциях живут только заметки. Забытые скрываем.
+          // Если в БД по исторической причине остались task/event с collectionId —
+          // не показываем их здесь: они останутся в своих временных срезах.
+          const collEntries = allEntries.filter(function (e) {
+            return (
+              e.collectionId === coll.id &&
+              e.type === "note" &&
+              e.status !== "forgotten"
+            );
           });
-          const doneEntries = allEntries.filter(function (e) {
-            return e.collectionId === coll.id && e.status === "done";
-          });
-          const allCollEntries = entries.concat(doneEntries);
-          const count = allCollEntries.length;
+          const count = collEntries.length;
 
-          const entriesHtml = allCollEntries
+          const entriesHtml = collEntries
             .map(function (entry) {
               const sym = getSymbolByEntry(entry);
               const statusClass = statusClassFor(entry);
@@ -47,9 +50,6 @@
                 '<span class="coll-entry-text">' +
                 escapeHtml(entry.text) +
                 "</span>" +
-                '<button class="coll-entry-check" data-action="toggle-coll-entry" data-id="' +
-                entry.id +
-                '" type="button" title="Выполнено">✓</button>' +
                 '<button class="coll-entry-del" data-action="delete-coll-entry" data-id="' +
                 entry.id +
                 '" type="button" title="Удалить">×</button>' +
@@ -145,16 +145,6 @@
             }
           }
           await dbDelete("collections", id);
-          await renderCollectionsScreen();
-          return;
-        }
-
-        if (action === "toggle-coll-entry") {
-          const entry = await dbGet("entries", id);
-          if (!entry) return;
-          entry.status = entry.status === "done" ? "open" : "done";
-          entry.updatedAt = new Date().toISOString();
-          await dbPut("entries", entry);
           await renderCollectionsScreen();
           return;
         }

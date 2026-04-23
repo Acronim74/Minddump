@@ -1,7 +1,11 @@
 ﻿    function getFutureMonths() {
+      // Future Log covers the next 6 months starting from the month after current.
+      // With `futureOffset=0` user sees months [now+1 .. now+6].
+      // Arrows shift the window by ±6 months; current and past months are still
+      // reachable via the ← arrow.
       const result = [];
       const now = new Date();
-      let startMonth = now.getMonth() + state.futureOffset * 6;
+      let startMonth = now.getMonth() + 1 + state.futureOffset * 6;
       let startYear = now.getFullYear();
 
       while (startMonth < 0) {
@@ -58,14 +62,22 @@
         .map(function (m) {
           const monthStr = m.year + "-" + String(m.month + 1).padStart(2, "0");
 
-          // На экране «Полгода» показываем только записи со status="future".
-          // Обычные дневные записи сюда не попадают автоматически.
+          // Полгода = горизонт «задачи и события на ближайшие 6 месяцев».
+          // Заметки сюда не попадают никогда (SPEC §3). Забытое прячем.
+          // Legacy-флаг status="future": пока держим как альтернативный способ
+          // попасть в Полгода, чтобы старые записи не исчезли. В будущих фазах
+          // он уйдёт вместе с перестройкой migration.
           const entries = allEntries.filter(function (e) {
-            if (e.status !== "future") return false;
-            if (!e.date) return false;
-            if (e.date.startsWith(monthStr)) return true;
-            // future-записи с прошедшей датой оседают в первом блоке диапазона.
-            if (e.date <= today && monthStr === firstMonthStr) return true;
+            if (e.type === "note") return false;
+            if (e.status === "forgotten") return false;
+
+            const entryMonth = e.month || (e.date ? e.date.slice(0, 7) : null);
+            if (entryMonth === monthStr) return true;
+
+            // Legacy: просроченные future-записи без точного месяца оседают в первом блоке.
+            if (e.status === "future" && e.date && e.date <= today && monthStr === firstMonthStr) {
+              return true;
+            }
             return false;
           });
 

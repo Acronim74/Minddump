@@ -26,8 +26,10 @@
         scopeEl.value = scope || "";
         document.getElementById("modal-text").value = "";
         document.getElementById("modal-date").value = defaultDate || state.currentDate;
+        // If opened from a collection, default the type to note.
+        const defaultType = collectionId ? "note" : "task";
         document.querySelectorAll(".type-btn").forEach(function (btn) {
-          btn.classList.toggle("active", btn.dataset.type === "task");
+          btn.classList.toggle("active", btn.dataset.type === defaultType);
         });
         document.querySelectorAll(".priority-btn").forEach(function (btn) {
           btn.classList.toggle("active", btn.dataset.priority === "");

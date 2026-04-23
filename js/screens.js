@@ -2,15 +2,20 @@
       const screen = document.getElementById("screen-today");
       const rawList = await dbGetByIndex("entries", "date", state.currentDate);
 
-      // На экране «Сегодня» показываем только записи дня.
-      // Записи со status="future" уехали в Полгода — их тут не показываем.
+      // На экране «Сегодня» показываем:
+      //  - задачи и события в активных статусах
+      //  - заметки без коллекции (заметки в коллекции живут только в коллекции)
+      //  - записи, уехавшие в Полгода (status="future") пока исключаем — это временное
+      //    поведение до Фазы 3, когда Полгода будет фильтроваться по `month`.
+      //  - забытые (status="forgotten") не показываем в активных списках.
       const list = rawList.filter(function (e) {
-        return e.status !== "future";
+        if (e.status === "future") return false;
+        if (e.status === "forgotten") return false;
+        if (e.type === "note" && e.collectionId) return false;
+        return true;
       });
 
-      list.sort(function (a, b) {
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      });
+      list.sort(compareTodayEntries);
 
       const rowsHtml = list.map(function (entry) {
         const sym = getSymbolByEntry(entry);
@@ -65,6 +70,25 @@
       if (n % 10 === 1 && n % 100 !== 11) return "невыполненная";
       if ([2, 3, 4].indexOf(n % 10) !== -1 && [12, 13, 14].indexOf(n % 100) === -1) return "невыполненных";
       return "невыполненных";
+    }
+
+    // Comparator for entries inside a single day on Today/Week screens.
+    // Groups: events first (ordered by time, no-time last), then tasks, then notes.
+    // Within a group entries fall back to createdAt ascending.
+    function compareTodayEntries(a, b) {
+      const groupOrder = { event: 0, task: 1, note: 2 };
+      const ga = groupOrder[a.type] != null ? groupOrder[a.type] : 3;
+      const gb = groupOrder[b.type] != null ? groupOrder[b.type] : 3;
+      if (ga !== gb) return ga - gb;
+
+      if (a.type === "event") {
+        // Events with time come first sorted by HH:MM; events without time trail.
+        const ta = a.time ? parseInt(a.time.replace(":", ""), 10) : 10000;
+        const tb = b.time ? parseInt(b.time.replace(":", ""), 10) : 10000;
+        if (ta !== tb) return ta - tb;
+      }
+
+      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
     }
 
     function bindTodayActions() {
