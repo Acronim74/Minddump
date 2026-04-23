@@ -236,45 +236,53 @@
       }
 
       const listEl = document.getElementById("month-entries-list");
-      const sortedDates = Object.keys(inDays).sort();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-      if (!sortedDates.length) {
-        listEl.innerHTML = undatedTaskEvent.length
-          ? ""
-          : '<div class="month-empty">Нет записей за этот месяц</div>';
-      } else {
-        listEl.innerHTML = sortedDates.map(function (dateStr) {
-          const entries = inDays[dateStr].slice().sort(compareTodayEntries);
-          const dayNum = parseInt(dateStr.split("-")[2], 10);
-          const isToday = dateStr === today;
-          const hasOpen = entries.some(function (e) {
-            return e.type === "task" && e.status === "open";
-          });
+      const dayBlocks = [];
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr =
+          year +
+          "-" +
+          String(month + 1).padStart(2, "0") +
+          "-" +
+          String(day).padStart(2, "0");
+        const entries = (inDays[dateStr] || []).slice().sort(compareTodayEntries);
+        const isToday = dateStr === today;
+        const hasOpen = entries.some(function (e) {
+          return e.type === "task" && e.status === "open";
+        });
+        const isEmpty = entries.length === 0;
 
-          let badgeClass = "month-day-num-badge";
-          if (isToday) badgeClass += " is-today";
-          else if (hasOpen) badgeClass += " has-open";
+        let blockClass = "month-day-block";
+        if (isEmpty) blockClass += " is-empty";
+        if (isToday) blockClass += " is-today";
 
-          const weekday = new Date(dateStr).toLocaleDateString("ru-RU", { weekday: "short" });
-          const countLabel = formatCountLabel(entries.length);
+        let badgeClass = "month-day-num-badge";
+        if (isToday) badgeClass += " is-today";
+        else if (hasOpen) badgeClass += " has-open";
+        if (isEmpty) badgeClass += " is-empty";
 
-          return (
-            '<div class="month-day-block">' +
-              '<div class="month-day-num-col">' +
-                '<div class="' + badgeClass + '" data-date="' + dateStr + '">' + dayNum + "</div>" +
-                (entries.length > 1 ? '<div class="month-day-line"></div>' : "") +
+        const weekday = new Date(dateStr).toLocaleDateString("ru-RU", { weekday: "short" });
+        const countLabel = isEmpty ? "" : formatCountLabel(entries.length);
+
+        dayBlocks.push(
+          '<div class="' + blockClass + '">' +
+            '<div class="month-day-num-col">' +
+              '<div class="' + badgeClass + '" data-date="' + dateStr + '">' + day + "</div>" +
+              (entries.length > 1 ? '<div class="month-day-line"></div>' : "") +
+            "</div>" +
+            '<div class="month-day-entries-col">' +
+              '<div class="month-day-header-row">' +
+                '<span class="month-day-weekday">' + weekday + "</span>" +
+                (countLabel ? '<span class="month-day-count">· ' + countLabel + "</span>" : "") +
               "</div>" +
-              '<div class="month-day-entries-col">' +
-                '<div class="month-day-header-row">' +
-                  '<span class="month-day-weekday">' + weekday + "</span>" +
-                  '<span class="month-day-count">· ' + countLabel + "</span>" +
-                "</div>" +
-                entries.map(renderMonthEntryRow).join("") +
-              "</div>" +
-            "</div>"
-          );
-        }).join("");
+              entries.map(renderMonthEntryRow).join("") +
+            "</div>" +
+          "</div>"
+        );
       }
+
+      listEl.innerHTML = dayBlocks.join("");
 
       // "Заметки месяца": undated notes without a collection.
       const ideasSection = document.getElementById("month-ideas-section");

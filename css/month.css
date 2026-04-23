@@ -75,6 +75,32 @@
       border: 1px solid rgba(245, 94, 122, 0.4);
     }
 
+    /* Empty-day row: keep the calendar rhythm but fade visually. */
+    .month-day-block.is-empty {
+      margin-bottom: 0;
+      opacity: 0.55;
+    }
+
+    .month-day-block.is-empty .month-day-entries-col {
+      padding-bottom: 4px;
+    }
+
+    .month-day-block.is-empty .month-day-header-row {
+      padding-bottom: 2px;
+    }
+
+    .month-day-num-badge.is-empty {
+      color: var(--text-muted);
+      background: transparent;
+      font-weight: 500;
+      opacity: 0.7;
+    }
+
+    .month-day-num-badge.is-empty:hover {
+      opacity: 1;
+      background: var(--surface-2);
+    }
+
     .month-day-line {
       width: 1px;
       background: var(--border);
