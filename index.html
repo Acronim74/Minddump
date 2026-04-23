@@ -1,987 +1,23 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MindDump</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f0f13">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MindDump">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0f0f13;
-      --surface: #1a1a22;
-      --surface-2: #22222e;
-      --surface-3: #2a2a38;
-      --accent: #5ef5c0;
-      --text: #e8e8f0;
-      --text-muted: #6b6b80;
-      --danger: #f55e7a;
-      --warning: #f5a623;
-      --border: #2a2a38;
-      --radius: 14px;
-      --nav-height: 78px;
-      --day-nav-height: 54px;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      min-height: 100%;
-      font-family: "DM Sans", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    #main-content {
-      min-height: 100dvh;
-    }
-
-    #app {
-      min-height: 100dvh;
-      padding: 20px 16px calc(var(--nav-height) + var(--day-nav-height) + 20px);
-    }
-
-    .screen {
-      display: none;
-    }
-
-    .screen.active {
-      display: block;
-    }
-
-    .today-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-
-    .today-title {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-      line-height: 1.1;
-    }
-
-    .today-date-subtitle {
-      margin-top: 6px;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
-    .add-btn {
-      width: 42px;
-      height: 42px;
-      border: none;
-      border-radius: 999px;
-      background: var(--accent);
-      color: #0c1410;
-      font-size: 28px;
-      line-height: 1;
-      cursor: pointer;
-    }
-
-    .entries-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .entry-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 12px 12px 12px 10px;
-      display: grid;
-      grid-template-columns: 20px 1fr auto auto;
-      align-items: center;
-      column-gap: 10px;
-    }
-
-    .entry-symbol {
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 1;
-      text-align: center;
-    }
-
-    .entry-text {
-      font-size: 15px;
-      line-height: 1.3;
-      word-break: break-word;
-    }
-
-    .entry-action {
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text);
-      border-radius: 10px;
-      min-width: 34px;
-      height: 32px;
-      cursor: pointer;
-      font-size: 15px;
-      padding: 0 8px;
-    }
-
-    .entry-item.status-done {
-      opacity: 0.45;
-    }
-
-    .entry-item.status-done .entry-text {
-      text-decoration: line-through;
-    }
-
-    .entry-item.status-migrated {
-      opacity: 0.4;
-    }
-
-    .empty-state {
-      margin-top: 30px;
-      text-align: center;
-      color: var(--text-muted);
-      padding: 30px 12px;
-      background: var(--surface);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-    }
-
-    .empty-state h3 {
-      margin: 0 0 8px;
-      font-size: 18px;
-      color: var(--text-muted);
-      font-weight: 500;
-    }
-
-    .empty-state p {
-      margin: 0;
-      font-size: 14px;
-    }
-
-    .placeholder {
-      margin-top: 20px;
-      min-height: 40dvh;
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-      background: var(--surface);
-      font-size: 16px;
-    }
-
-    #sidebar {
-      display: none;
-      width: 240px;
-      flex-shrink: 0;
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      flex-direction: column;
-      padding: 28px 16px;
-      height: 100dvh;
-      position: sticky;
-      top: 0;
-    }
-
-    .sidebar-logo {
-      font-size: 20px;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 28px;
-      padding: 0 8px;
-    }
-
-    .sidebar-nav {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .sidebar-btn {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-muted);
-      font: inherit;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      text-align: left;
-      width: 100%;
-    }
-
-    .sidebar-btn:hover {
-      background: var(--surface-2);
-      color: var(--text);
-    }
-
-    .sidebar-btn.active {
-      background: rgba(94, 245, 192, 0.08);
-      border-color: rgba(94, 245, 192, 0.25);
-      color: var(--accent);
-    }
-
-    .sidebar-icon {
-      font-size: 16px;
-      width: 20px;
-      text-align: center;
-    }
-
-    #day-nav {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: var(--nav-height);
-      height: var(--day-nav-height);
-      background: rgba(15, 15, 19, 0.96);
-      border-top: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 0 12px;
-      z-index: 15;
-    }
-
-    #day-nav.hidden {
-      display: none;
-    }
-
-    .day-arrow {
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text);
-      border-radius: 10px;
-      width: 38px;
-      height: 34px;
-      font-size: 20px;
-      cursor: pointer;
-    }
-
-    .day-arrow.alert {
-      color: var(--danger);
-      border-color: var(--danger);
-    }
-
-    .day-nav-label {
-      min-width: 180px;
-      text-align: center;
-      font-size: 14px;
-      color: var(--text-muted);
-    }
-
-    #bottom-nav {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: var(--nav-height);
-      background: rgba(26, 26, 34, 0.97);
-      border-top: 1px solid var(--border);
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      padding: 10px 12px 12px;
-      z-index: 20;
-    }
-
-    .nav-btn {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: var(--surface-2);
-      color: var(--text-muted);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    .nav-btn span {
-      font-size: 11px;
-      line-height: 1;
-    }
-
-    .nav-btn.active {
-      color: var(--accent);
-      border-color: var(--accent);
-      background: #1b2823;
-    }
-
-    /* ===== MONTH SCREEN ===== */
-
-    .month-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .month-title-text {
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .month-nav-arrow {
-      width: 34px;
-      height: 34px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text-muted);
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    .month-nav-arrow:hover {
-      color: var(--text);
-      border-color: var(--text-muted);
-    }
-
-    .month-day-block {
-      display: flex;
-      gap: 0;
-      margin-bottom: 4px;
-    }
-
-    .month-day-num-col {
-      width: 48px;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding-top: 6px;
-      position: relative;
-    }
-
-    .month-day-num-badge {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-muted);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .month-day-num-badge:hover {
-      background: var(--surface-2);
-      color: var(--text);
-    }
-
-    .month-day-num-badge.is-today {
-      background: var(--accent);
-      color: #0c1410;
-    }
-
-    .month-day-num-badge.has-open {
-      color: var(--danger);
-      border: 1px solid rgba(245, 94, 122, 0.4);
-    }
-
-    .month-day-line {
-      width: 1px;
-      background: var(--border);
-      flex: 1;
-      min-height: 8px;
-      margin-top: 4px;
-    }
-
-    .month-day-entries-col {
-      flex: 1;
-      padding: 2px 0 10px 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .month-entry-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border-radius: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      cursor: pointer;
-    }
-
-    .month-entry-row:hover {
-      border-color: var(--text-muted);
-    }
-
-    .month-entry-row.is-done {
-      opacity: 0.4;
-    }
-
-    .month-entry-row.is-done .month-entry-text {
-      text-decoration: line-through;
-    }
-
-    .month-entry-symbol {
-      font-size: 14px;
-      font-weight: 600;
-      width: 16px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .month-entry-text {
-      flex: 1;
-      font-size: 13px;
-      line-height: 1.3;
-    }
-
-    .month-section-divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 20px 0 12px;
-    }
-
-    .month-section-label {
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-    }
-
-    .month-idea-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      margin-bottom: 6px;
-    }
-
-    .month-idea-symbol {
-      font-size: 14px;
-      color: #c4b5fd;
-      width: 16px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .month-idea-text {
-      flex: 1;
-      font-size: 13px;
-      color: var(--text);
-    }
-
-    .month-idea-actions {
-      display: flex;
-      gap: 6px;
-    }
-
-    .month-idea-btn {
-      padding: 4px 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text-muted);
-      font: inherit;
-      font-size: 11px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .month-idea-btn:hover {
-      color: var(--text);
-      border-color: var(--text-muted);
-    }
-
-    .month-idea-btn.to-task:hover {
-      color: var(--accent);
-      border-color: var(--accent);
-    }
-
-    .month-idea-btn.danger:hover {
-      color: var(--danger);
-      border-color: var(--danger);
-    }
-
-    .month-empty {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 14px;
-      padding: 40px 0;
-    }
-
-    /* ===== FUTURE LOG ===== */
-
-    .future-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .future-title {
-      margin: 0;
-      font-size: 22px;
-      font-weight: 600;
-    }
-
-    .future-range {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    .future-header-nav {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .future-month-block {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 10px;
-      overflow: hidden;
-    }
-
-    .future-month-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      background: var(--surface-2);
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .future-month-header:hover {
-      background: var(--surface-3);
-    }
-
-    .future-month-name {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      color: var(--accent);
-    }
-
-    .future-month-name.empty {
-      color: var(--text-muted);
-    }
-
-    .future-month-meta {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .future-month-count {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .future-month-toggle {
-      font-size: 12px;
-      color: var(--text-muted);
-      width: 16px;
-      text-align: center;
-    }
-
-    .future-month-body {
-      background: var(--surface);
-      padding: 8px 12px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .future-month-body.collapsed {
-      display: none;
-    }
-
-    .future-entry-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-    }
-
-    .future-entry-symbol {
-      font-size: 14px;
-      font-weight: 600;
-      width: 16px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .future-entry-text {
-      flex: 1;
-      font-size: 13px;
-      line-height: 1.3;
-    }
-
-    .future-entry-date {
-      font-size: 11px;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .future-entry-del {
-      width: 26px;
-      height: 26px;
-      border-radius: 7px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 13px;
-      cursor: pointer;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .future-entry-del:hover {
-      background: rgba(245, 94, 122, 0.1);
-      border-color: var(--danger);
-      color: var(--danger);
-    }
-
-    .future-add-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 10px;
-      border-radius: 10px;
-      border: 1px dashed var(--border);
-      background: transparent;
-      color: var(--text-muted);
-      font: inherit;
-      font-size: 12px;
-      cursor: pointer;
-      width: 100%;
-      margin-top: 4px;
-    }
-
-    .future-add-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .future-empty-body {
-      background: var(--surface);
-      padding: 10px 12px;
-      font-size: 12px;
-      color: var(--text-muted);
-      font-style: italic;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.65);
-      z-index: 100;
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-    }
-
-    .modal-sheet {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius) var(--radius) 0 0;
-      padding: 20px;
-      width: 100%;
-      max-width: 520px;
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-
-    .modal-title {
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .modal-close {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 13px;
-    }
-
-    .type-selector {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-
-    .type-btn {
-      flex: 1;
-      padding: 8px 6px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--surface-2);
-      color: var(--text-muted);
-      font: inherit;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .type-btn.active {
-      border-color: var(--accent);
-      color: var(--text);
-      background: rgba(94, 245, 192, 0.06);
-    }
-
-    .modal-textarea {
-      width: 100%;
-      background: var(--surface-2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font: inherit;
-      font-size: 15px;
-      resize: vertical;
-      margin-bottom: 12px;
-    }
-
-    .modal-textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .modal-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .modal-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      width: 50px;
-      flex-shrink: 0;
-    }
-
-    .modal-input {
-      flex: 1;
-      background: var(--surface-2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 8px 10px;
-      font: inherit;
-      font-size: 14px;
-    }
-
-    .modal-input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-    }
-
-    .modal-btn-cancel {
-      padding: 9px 18px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: transparent;
-      color: var(--text-muted);
-      font: inherit;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    .modal-btn-save {
-      padding: 9px 22px;
-      border-radius: 10px;
-      border: 1px solid var(--accent);
-      background: var(--accent);
-      color: #0c1410;
-      font: inherit;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .menu-sheet {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius) var(--radius) 0 0;
-      padding: 8px;
-      width: 100%;
-      max-width: 520px;
-    }
-
-    .menu-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      border-radius: 10px;
-      font-size: 15px;
-      color: var(--text);
-      cursor: pointer;
-    }
-
-    .menu-item:hover {
-      background: var(--surface-2);
-    }
-
-    .menu-item.danger:hover {
-      background: rgba(245, 94, 122, 0.1);
-      color: var(--danger);
-    }
-
-    .menu-icon {
-      width: 20px;
-      text-align: center;
-      font-size: 16px;
-      color: var(--text-muted);
-    }
-
-    .menu-divider {
-      height: 1px;
-      background: var(--border);
-      margin: 4px 8px;
-    }
-
-    @media (min-width: 768px) {
-      body {
-        display: flex;
-        height: 100dvh;
-        overflow: hidden;
-      }
-
-      #sidebar {
-        display: flex;
-      }
-
-      #main-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-      }
-
-      #bottom-nav {
-        display: none;
-      }
-
-      #day-nav {
-        position: static;
-        border-top: 1px solid var(--border);
-        background: transparent;
-        margin-top: auto;
-        padding: 12px 0 0;
-      }
-
-      #app {
-        flex: 1;
-        overflow-y: auto;
-        padding: 28px 32px;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-      }
-
-      #screen-today.active {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-      }
-
-      #screen-month.active {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-height: 0;
-      }
-
-      #month-entries-list {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0;
-      }
-
-      #screen-future.active {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-height: 0;
-      }
-
-      #future-blocks {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0;
-      }
-
-      .entries-list {
-        flex: 1;
-      }
-
-      .modal-overlay {
-        align-items: center;
-      }
-
-      .modal-sheet {
-        border-radius: var(--radius);
-      }
-
-      .menu-sheet {
-        border-radius: var(--radius);
-        max-width: 300px;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/month.css">
+  <link rel="stylesheet" href="css/future.css">
+  <link rel="stylesheet" href="css/collections.css">
+  <link rel="stylesheet" href="css/modals.css">
+  <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
   <aside id="sidebar">
@@ -1002,6 +38,10 @@
       <button class="sidebar-btn" data-screen="collections" type="button">
         <span class="sidebar-icon">❑</span>
         <span>Коллекции</span>
+      </button>
+      <button class="sidebar-btn" data-screen="settings" type="button">
+        <span class="sidebar-icon">⚙</span>
+        <span>Настройки</span>
       </button>
     </nav>
   </aside>
@@ -1040,7 +80,61 @@
         <div id="future-blocks"></div>
       </div>
       <div id="screen-collections" class="screen">
-        <div class="placeholder">Раздел в разработке</div>
+        <div class="coll-screen-header">
+          <h2 class="coll-screen-title">Коллекции</h2>
+          <button class="add-btn" id="new-collection-btn" type="button" title="Новая коллекция">+</button>
+        </div>
+
+        <div id="collections-list"></div>
+      </div>
+      <div id="screen-settings" class="screen">
+        <div class="settings-header">
+          <h2 class="settings-title">Настройки</h2>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-label">Данные</div>
+
+          <div class="settings-item">
+            <div class="settings-item-info">
+              <div class="settings-item-title">Экспорт данных</div>
+              <div class="settings-item-desc">Скачать все записи и коллекции в JSON</div>
+            </div>
+            <button class="settings-btn" id="export-btn" type="button">Экспорт</button>
+          </div>
+
+          <div class="settings-item">
+            <div class="settings-item-info">
+              <div class="settings-item-title">Импорт данных</div>
+              <div class="settings-item-desc">Восстановить из JSON файла</div>
+            </div>
+            <label class="settings-btn" id="import-label">
+              Импорт
+              <input type="file" id="import-file" accept=".json" style="display:none">
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-label">Опасная зона</div>
+
+          <div class="settings-item">
+            <div class="settings-item-info">
+              <div class="settings-item-title">Очистить все данные</div>
+              <div class="settings-item-desc">Удалить все записи и коллекции без возможности восстановления</div>
+            </div>
+            <button class="settings-btn danger" id="clear-btn" type="button">Очистить</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-label">О приложении</div>
+          <div class="settings-about">
+            <div class="settings-about-name">MindDump</div>
+            <div class="settings-about-version">Версия 1.0</div>
+            <div class="settings-about-desc">Персональный журнал мыслей и идей.<br>Основан на методике Bullet Journal.</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1055,12 +149,15 @@
       <button class="nav-btn" data-screen="month" type="button">▦<span>Месяц</span></button>
       <button class="nav-btn" data-screen="future" type="button">⬡<span>Полгода</span></button>
       <button class="nav-btn" data-screen="collections" type="button">❑<span>Коллекции</span></button>
+      <button class="nav-btn" data-screen="settings" type="button">⚙<span>Настройки</span></button>
     </nav>
   </div>
 
   <div id="modal-overlay" class="modal-overlay" style="display:none">
     <div class="modal-sheet">
       <input type="hidden" id="modal-edit-id" value="">
+      <input type="hidden" id="modal-coll-id" value="">
+      <input type="hidden" id="modal-scope" value="">
       <div class="modal-header">
         <span class="modal-title" id="modal-title">Новая запись</span>
         <button class="modal-close" id="modal-close-btn" type="button">✕</button>
@@ -1085,6 +182,19 @@
         <input type="date" id="modal-date" class="modal-input">
       </div>
 
+      <div class="modal-row">
+        <label class="modal-label">Приоритет</label>
+        <div class="priority-selector">
+          <button class="priority-btn active" data-priority="" type="button">Нет</button>
+          <button class="priority-btn" data-priority="high" type="button">
+            <span style="color:var(--warning)">*</span> Приоритет
+          </button>
+          <button class="priority-btn" data-priority="insight" type="button">
+            <span style="color:#c4b5fd">!</span> Озарение
+          </button>
+        </div>
+      </div>
+
       <div class="modal-actions">
         <button class="modal-btn-cancel" id="modal-cancel-btn" type="button">Отмена</button>
         <button class="modal-btn-save" id="modal-save-btn" type="button">Сохранить</button>
@@ -1102,10 +212,31 @@
         <span class="menu-icon" style="color:#c4b5fd">‹</span>
         Отложить в Полгода
       </div>
+      <div class="menu-item" id="menu-raise" style="display:none">
+        <span class="menu-icon" style="color:var(--accent)">↑</span>
+        Поднять в месяц
+      </div>
+      <div class="menu-item" id="menu-assign-coll">
+        <span class="menu-icon" style="color:var(--accent)">❑</span>
+        Добавить в коллекцию
+      </div>
+      <div class="menu-divider"></div>
+      <div class="menu-item" id="menu-priority">
+        <span class="menu-icon" style="color:var(--warning)">*</span>
+        <span id="menu-priority-label">Отметить приоритет</span>
+      </div>
+      <div class="menu-item" id="menu-insight">
+        <span class="menu-icon" style="color:#c4b5fd">!</span>
+        <span id="menu-insight-label">Отметить озарение</span>
+      </div>
       <div class="menu-divider"></div>
       <div class="menu-item" id="menu-edit">
         <span class="menu-icon">✎</span>
         Редактировать
+      </div>
+      <div class="menu-item" id="menu-irrelevant">
+        <span class="menu-icon" style="color:var(--text-muted)">~</span>
+        Неактуально
       </div>
       <div class="menu-item danger" id="menu-delete">
         <span class="menu-icon" style="color:var(--danger)">🗑</span>
@@ -1114,948 +245,70 @@
     </div>
   </div>
 
-  <script>
-    const DB_NAME = "minddump-db";
-    const DB_VERSION = 3;
-    let db = null;
-
-    const nowDate = new Date();
-    const state = {
-      currentDate: todayStr(),
-      currentMonth: nowDate.getMonth(),
-      currentYear: nowDate.getFullYear(),
-      futureOffset: 0
-    };
-    let activeMenuEntryId = null;
-
-    function uid() {
-      return crypto.randomUUID();
-    }
-
-    function escapeHtml(value) {
-      return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
-
-    function todayStr() {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      return year + "-" + month + "-" + day;
-    }
-
-    function addDays(dateStr, daysDelta) {
-      const date = new Date(dateStr + "T00:00:00");
-      date.setDate(date.getDate() + daysDelta);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return year + "-" + month + "-" + day;
-    }
-
-    function formatDate(dateStr) {
-      const date = new Date(dateStr + "T00:00:00");
-      return new Intl.DateTimeFormat("ru-RU", {
-        day: "numeric",
-        month: "long",
-        weekday: "long"
-      }).format(date);
-    }
-
-    function formatNavDate(dateStr) {
-      const date = new Date(dateStr + "T00:00:00");
-      return new Intl.DateTimeFormat("ru-RU", {
-        day: "numeric",
-        month: "long",
-        year: "numeric"
-      }).format(date);
-    }
-
-    async function dbInit() {
-      if (db) return db;
-
-      db = await new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-        request.onupgradeneeded = function () {
-          const database = request.result;
-
-          if (!database.objectStoreNames.contains("entries")) {
-            const entriesStore = database.createObjectStore("entries", { keyPath: "id" });
-            entriesStore.createIndex("date", "date", { unique: false });
-            entriesStore.createIndex("status", "status", { unique: false });
-            entriesStore.createIndex("collectionId", "collectionId", { unique: false });
-          }
-
-          if (!database.objectStoreNames.contains("collections")) {
-            database.createObjectStore("collections", { keyPath: "id" });
-          }
-        };
-
-        request.onsuccess = function () {
-          resolve(request.result);
-        };
-
-        request.onerror = function () {
-          reject(request.error);
-        };
-      });
-
-      return db;
-    }
-
-    async function dbAdd(store, obj) {
-      await dbInit();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, "readwrite");
-        const os = tx.objectStore(store);
-        const req = os.add(obj);
-        req.onsuccess = function () {
-          resolve(req.result);
-        };
-        req.onerror = function () {
-          reject(req.error);
-        };
-      });
-    }
-
-    async function dbGetAll(store) {
-      await dbInit();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, "readonly");
-        const os = tx.objectStore(store);
-        const req = os.getAll();
-        req.onsuccess = function () {
-          resolve(req.result || []);
-        };
-        req.onerror = function () {
-          reject(req.error);
-        };
-      });
-    }
-
-    async function dbGet(store, id) {
-      await dbInit();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, "readonly");
-        const os = tx.objectStore(store);
-        const req = os.get(id);
-        req.onsuccess = function () {
-          resolve(req.result || null);
-        };
-        req.onerror = function () {
-          reject(req.error);
-        };
-      });
-    }
-
-    async function dbPut(store, obj) {
-      await dbInit();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, "readwrite");
-        const os = tx.objectStore(store);
-        const req = os.put(obj);
-        req.onsuccess = function () {
-          resolve(req.result);
-        };
-        req.onerror = function () {
-          reject(req.error);
-        };
-      });
-    }
-
-    async function dbDelete(store, id) {
-      await dbInit();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, "readwrite");
-        const os = tx.objectStore(store);
-        const req = os.delete(id);
-        req.onsuccess = function () {
-          resolve(true);
-        };
-        req.onerror = function () {
-          reject(req.error);
-        };
-      });
-    }
-
-    async function dbGetByIndex(store, indexName, value) {
-      await dbInit();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, "readonly");
-        const os = tx.objectStore(store);
-        const idx = os.index(indexName);
-        const req = idx.getAll(value);
-        req.onsuccess = function () {
-          resolve(req.result || []);
-        };
-        req.onerror = function () {
-          reject(req.error);
-        };
-      });
-    }
-
-    function getSymbolByEntry(entry) {
-      if (entry.status === "done") {
-        return { char: "×", color: "var(--text-muted)" };
-      }
-      if (entry.status === "migrated") {
-        return { char: "›", color: "var(--warning)" };
-      }
-      if (entry.type === "event") {
-        return { char: "○", color: "#7dd3fc" };
-      }
-      if (entry.type === "note") {
-        return { char: "—", color: "#c4b5fd" };
-      }
-      return { char: "·", color: "var(--accent)" };
-    }
-
-    async function hasOpenOnDate(dateStr) {
-      const dayEntries = await dbGetByIndex("entries", "date", dateStr);
-      return dayEntries.some(function (item) {
-        return item.status === "open";
-      });
-    }
-
-    async function renderTodayScreen() {
-      const screen = document.getElementById("screen-today");
-      const list = await dbGetByIndex("entries", "date", state.currentDate);
-
-      list.sort(function (a, b) {
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-      });
-
-      const rowsHtml = list.map(function (entry) {
-        const sym = getSymbolByEntry(entry);
-        const statusClass = entry.status ? "status-" + entry.status : "status-open";
-        return (
-          '<div class="entry-item ' + statusClass + '" data-id="' + entry.id + '">' +
-            '<span class="entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
-            '<span class="entry-text">' + escapeHtml(entry.text) + "</span>" +
-            '<button type="button" class="entry-action js-toggle-done">✓</button>' +
-            '<button type="button" class="entry-action js-entry-menu">···</button>' +
-          "</div>"
-        );
-      }).join("");
-
-      const emptyHtml =
-        '<div class="empty-state">' +
-          "<h3>Нет записей на сегодня</h3>" +
-          "<p>Нажмите + чтобы добавить первую</p>" +
-        "</div>";
-
-      screen.innerHTML =
-        '<header class="today-header">' +
-          "<div>" +
-            '<h1 class="today-title">Сегодня</h1>' +
-            '<div class="today-date-subtitle">' + escapeHtml(formatDate(state.currentDate)) + "</div>" +
-          "</div>" +
-          '<button class="add-btn" id="today-add-btn" type="button" aria-label="Добавить запись">+</button>' +
-        "</header>" +
-        '<section class="entries-list">' + (rowsHtml || emptyHtml) + "</section>";
-
-      bindTodayActions();
-      renderDayNav();
-    }
-
-    function bindTodayActions() {
-      const addBtn = document.getElementById("today-add-btn");
-      if (addBtn) {
-        addBtn.onclick = function () {
-          openModal(state.currentDate);
-        };
-      }
-
-      const toggleButtons = document.querySelectorAll(".js-toggle-done");
-      toggleButtons.forEach(function (button) {
-        button.onclick = async function (event) {
-          const row = event.currentTarget.closest(".entry-item");
-          if (!row) return;
-          const entryId = row.getAttribute("data-id");
-          const entry = await dbGet("entries", entryId);
-          if (!entry) return;
-          entry.status = entry.status === "done" ? "open" : "done";
-          entry.updatedAt = new Date().toISOString();
-          await dbPut("entries", entry);
-          await renderTodayScreen();
-        };
-      });
-
-      const menuButtons = document.querySelectorAll(".js-entry-menu");
-      menuButtons.forEach(function (button) {
-        button.onclick = function (event) {
-          const row = event.currentTarget.closest(".entry-item");
-          if (!row) return;
-          openEntryMenu(row.getAttribute("data-id"));
-        };
-      });
-    }
-
-    async function renderDayNav() {
-      const label = document.getElementById("day-nav-label");
-      const prevBtn = document.getElementById("day-prev");
-      if (label) {
-        label.textContent = formatNavDate(state.currentDate);
-      }
-      if (prevBtn) {
-        const previousDate = addDays(state.currentDate, -1);
-        const hasOpen = await hasOpenOnDate(previousDate);
-        prevBtn.classList.toggle("alert", hasOpen);
-      }
-    }
-
-    function bindDayNavEvents() {
-      const prevBtn = document.getElementById("day-prev");
-      const nextBtn = document.getElementById("day-next");
-
-      prevBtn.addEventListener("click", async function () {
-        state.currentDate = addDays(state.currentDate, -1);
-        await renderTodayScreen();
-      });
-
-      nextBtn.addEventListener("click", async function () {
-        state.currentDate = addDays(state.currentDate, 1);
-        await renderTodayScreen();
-      });
-    }
-
-    function switchToScreen(target) {
-      const allNavBtns = document.querySelectorAll(".nav-btn, .sidebar-btn");
-      const screens = {
-        today: document.getElementById("screen-today"),
-        month: document.getElementById("screen-month"),
-        future: document.getElementById("screen-future"),
-        collections: document.getElementById("screen-collections")
-      };
-      const dayNav = document.getElementById("day-nav");
-
-      allNavBtns.forEach(function (btn) {
-        btn.classList.toggle("active", btn.getAttribute("data-screen") === target);
-      });
-      Object.keys(screens).forEach(function (key) {
-        screens[key].classList.toggle("active", key === target);
-      });
-      dayNav.classList.toggle("hidden", target !== "today");
-    }
-
-    async function renderMonthScreen() {
-      const year = state.currentYear;
-      const month = state.currentMonth;
-
-      const titleEl = document.getElementById("month-title");
-      titleEl.textContent = new Date(year, month, 1).toLocaleDateString("ru-RU", {
-        month: "long",
-        year: "numeric"
-      });
-
-      const allEntries = await dbGetAll("entries");
-      const monthStr = year + "-" + String(month + 1).padStart(2, "0");
-      const monthEntries = allEntries.filter(function (e) {
-        return e.date && e.date.startsWith(monthStr);
-      });
-
-      const byDate = {};
-      monthEntries.forEach(function (e) {
-        if (!byDate[e.date]) byDate[e.date] = [];
-        byDate[e.date].push(e);
-      });
-
-      const today = todayStr();
-      const sortedDates = Object.keys(byDate).sort();
-
-      const listEl = document.getElementById("month-entries-list");
-
-      if (!sortedDates.length) {
-        listEl.innerHTML = '<div class="month-empty">Нет записей за этот месяц</div>';
-      } else {
-        listEl.innerHTML = sortedDates.map(function (dateStr) {
-          const entries = byDate[dateStr];
-          const dayNum = parseInt(dateStr.split("-")[2], 10);
-          const isToday = dateStr === today;
-          const hasOpen = entries.some(function (e) {
-            return e.status === "open";
-          });
-
-          let badgeClass = "month-day-num-badge";
-          if (isToday) badgeClass += " is-today";
-          else if (hasOpen) badgeClass += " has-open";
-
-          const entriesHtml = entries.map(function (entry) {
-            const sym = getSymbolByEntry(entry);
-            const doneClass = entry.status === "done" ? " is-done" : "";
-            return (
-              '<div class="month-entry-row' + doneClass + '" data-id="' + entry.id + '">' +
-                '<span class="month-entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
-                '<span class="month-entry-text">' + escapeHtml(entry.text) + "</span>" +
-              "</div>"
-            );
-          }).join("");
-
-          return (
-            '<div class="month-day-block">' +
-              '<div class="month-day-num-col">' +
-                '<div class="' + badgeClass + '" data-date="' + dateStr + '">' + dayNum + "</div>" +
-                (entries.length > 1 ? '<div class="month-day-line"></div>' : "") +
-              "</div>" +
-              '<div class="month-day-entries-col">' + entriesHtml + "</div>" +
-            "</div>"
-          );
-        }).join("");
-      }
-
-      const ideas = monthEntries.filter(function (e) {
-        return e.type === "note";
-      });
-      const ideasSection = document.getElementById("month-ideas-section");
-      const ideasList = document.getElementById("month-ideas-list");
-
-      if (!ideas.length) {
-        ideasSection.style.display = "none";
-        ideasList.innerHTML = "";
-      } else {
-        ideasSection.style.display = "block";
-        ideasList.innerHTML = ideas.map(function (entry) {
-          return (
-            '<div class="month-idea-row" data-id="' + entry.id + '">' +
-              '<span class="month-idea-symbol">—</span>' +
-              '<span class="month-idea-text">' + escapeHtml(entry.text) + "</span>" +
-              '<div class="month-idea-actions">' +
-                '<button class="month-idea-btn to-task" data-action="to-task" data-id="' + entry.id + '" type="button">↻ В задачу</button>' +
-                '<button class="month-idea-btn danger" data-action="forget" data-id="' + entry.id + '" type="button">Забыть</button>' +
-              "</div>" +
-            "</div>"
-          );
-        }).join("");
-      }
-
-      bindMonthEvents();
-    }
-
-    function bindMonthEvents() {
-      const listEl = document.getElementById("month-entries-list");
-      listEl.onclick = async function (event) {
-        const row = event.target.closest(".month-entry-row");
-        if (row) {
-          const entry = await dbGet("entries", row.dataset.id);
-          if (!entry) return;
-          state.currentDate = entry.date;
-          switchToScreen("today");
-          await renderTodayScreen();
-          openModal(entry.date, entry);
-          return;
-        }
-        const badge = event.target.closest(".month-day-num-badge");
-        if (badge && badge.dataset.date) {
-          state.currentDate = badge.dataset.date;
-          switchToScreen("today");
-          await renderTodayScreen();
-        }
-      };
-
-      const ideasList = document.getElementById("month-ideas-list");
-      ideasList.onclick = async function (event) {
-        const btn = event.target.closest("[data-action]");
-        if (!btn) return;
-        const id = btn.dataset.id;
-        const action = btn.dataset.action;
-        const entry = await dbGet("entries", id);
-        if (!entry) return;
-
-        if (action === "to-task") {
-          entry.type = "task";
-          entry.updatedAt = new Date().toISOString();
-          await dbPut("entries", entry);
-          await renderMonthScreen();
-        }
-
-        if (action === "forget") {
-          if (!confirm("Удалить идею?")) return;
-          await dbDelete("entries", id);
-          await renderMonthScreen();
-        }
-      };
-    }
-
-    function bindMonthNavEvents() {
-      document.getElementById("month-prev").addEventListener("click", async function () {
-        state.currentMonth--;
-        if (state.currentMonth < 0) {
-          state.currentMonth = 11;
-          state.currentYear--;
-        }
-        await renderMonthScreen();
-      });
-
-      document.getElementById("month-next").addEventListener("click", async function () {
-        state.currentMonth++;
-        if (state.currentMonth > 11) {
-          state.currentMonth = 0;
-          state.currentYear++;
-        }
-        await renderMonthScreen();
-      });
-    }
-
-    function bindNavEvents() {
-      const navButtons = document.querySelectorAll(".nav-btn, .sidebar-btn");
-
-      navButtons.forEach(function (button) {
-        button.addEventListener("click", async function () {
-          const target = button.getAttribute("data-screen");
-          switchToScreen(target);
-          if (target === "month") {
-            await renderMonthScreen();
-          }
-          if (target === "future") {
-            await renderFutureScreen();
-          }
-        });
-      });
-    }
-
-    function getFutureMonths() {
-      const result = [];
-      const now = new Date();
-      let startMonth = now.getMonth() + state.futureOffset * 6;
-      let startYear = now.getFullYear();
-
-      while (startMonth < 0) {
-        startMonth += 12;
-        startYear--;
-      }
-      while (startMonth > 11) {
-        startMonth -= 12;
-        startYear++;
-      }
-
-      for (let i = 0; i < 6; i++) {
-        let m = startMonth + i;
-        let y = startYear;
-        while (m > 11) {
-          m -= 12;
-          y++;
-        }
-        result.push({
-          year: y,
-          month: m,
-          label: new Date(y, m, 1).toLocaleDateString("ru-RU", { month: "long", year: "numeric" })
-        });
-      }
-      return result;
-    }
-
-    function pluralEntries(n) {
-      if (n % 10 === 1 && n % 100 !== 11) return "запись";
-      if ([2, 3, 4].indexOf(n % 10) !== -1 && [12, 13, 14].indexOf(n % 100) === -1) return "записи";
-      return "записей";
-    }
-
-    async function renderFutureScreen() {
-      const months = getFutureMonths();
-      const allEntries = await dbGetAll("entries");
-      const today = todayStr();
-
-      const first = months[0];
-      const last = months[5];
-      const firstName = new Date(first.year, first.month, 1).toLocaleDateString("ru-RU", {
-        month: "long"
-      });
-      const lastName = new Date(last.year, last.month, 1).toLocaleDateString("ru-RU", {
-        month: "long",
-        year: "numeric"
-      });
-      document.getElementById("future-range").textContent = firstName + " — " + lastName;
-
-      const firstMonthStr =
-        months[0].year + "-" + String(months[0].month + 1).padStart(2, "0");
-
-      const blocksHtml = months
-        .map(function (m) {
-          const monthStr = m.year + "-" + String(m.month + 1).padStart(2, "0");
-
-          const entries = allEntries
-            .filter(function (e) {
-              if (!e.date) return false;
-              if (e.date.startsWith(monthStr)) return true;
-              if (e.status === "future" && e.date <= today) {
-                if (monthStr === firstMonthStr) {
-                  return true;
-                }
-              }
-              return false;
-            })
-            .filter(function (e) {
-              return e.status !== "done";
-            });
-
-          const isEmpty = entries.length === 0;
-          const count = entries.length;
-          const nameClass = isEmpty ? "future-month-name empty" : "future-month-name";
-
-          const monthLabel = new Date(m.year, m.month, 1).toLocaleDateString("ru-RU", {
-            month: "long",
-            year: "numeric"
-          });
-
-          const entriesHtml = entries
-            .map(function (entry) {
-              const sym = getSymbolByEntry(entry);
-              const dayNum = entry.date ? parseInt(entry.date.split("-")[2], 10) : "";
-              const dateHint =
-                entry.date && !entry.date.startsWith(monthStr)
-                  ? ""
-                  : dayNum
-                    ? dayNum +
-                      " " +
-                      new Date(m.year, m.month, 1).toLocaleDateString("ru-RU", { month: "short" })
-                    : "";
-
-              return (
-                '<div class="future-entry-row" data-id="' +
-                entry.id +
-                '">' +
-                '<span class="future-entry-symbol" style="color:' +
-                sym.color +
-                '">' +
-                sym.char +
-                "</span>" +
-                '<span class="future-entry-text">' +
-                escapeHtml(entry.text) +
-                "</span>" +
-                (dateHint ? '<span class="future-entry-date">' + dateHint + "</span>" : "") +
-                '<button class="future-entry-del" data-action="delete-future" data-id="' +
-                entry.id +
-                '" type="button" title="Удалить">×</button>' +
-                "</div>"
-              );
-            })
-            .join("");
-
-          return (
-            '<div class="future-month-block" data-month="' +
-            monthStr +
-            '">' +
-            '<div class="future-month-header" data-toggle="' +
-            monthStr +
-            '">' +
-            '<span class="' +
-            nameClass +
-            '">' +
-            monthLabel.toUpperCase() +
-            "</span>" +
-            '<div class="future-month-meta">' +
-            '<span class="future-month-count">' +
-            (count ? count + " " + pluralEntries(count) : "—") +
-            "</span>" +
-            '<span class="future-month-toggle">' +
-            (isEmpty ? "▸" : "▾") +
-            "</span>" +
-            "</div>" +
-            "</div>" +
-            (isEmpty
-              ? '<div class="future-empty-body future-month-body" data-body="' +
-                monthStr +
-                '">Нет записей' +
-                '<button class="future-add-btn" data-action="add-future" data-month="' +
-                monthStr +
-                '" type="button">+ Добавить</button>' +
-                "</div>"
-              : '<div class="future-month-body" data-body="' +
-                monthStr +
-                '">' +
-                entriesHtml +
-                '<button class="future-add-btn" data-action="add-future" data-month="' +
-                monthStr +
-                '" type="button">+ Добавить запись</button>' +
-                "</div>") +
-            "</div>"
-          );
-        })
-        .join("");
-
-      document.getElementById("future-blocks").innerHTML = blocksHtml;
-      bindFutureEvents();
-    }
-
-    function bindFutureEvents() {
-      const blocksEl = document.getElementById("future-blocks");
-
-      blocksEl.onclick = async function (event) {
-        const header = event.target.closest("[data-toggle]");
-        if (header && !event.target.closest("[data-action]")) {
-          const monthStr = header.dataset.toggle;
-          const body = blocksEl.querySelector('[data-body="' + monthStr + '"]');
-          const toggle = header.querySelector(".future-month-toggle");
-          if (body) {
-            const isCollapsed = body.classList.contains("collapsed");
-            body.classList.toggle("collapsed", !isCollapsed);
-            if (toggle) toggle.textContent = isCollapsed ? "▾" : "▸";
-          }
-          return;
-        }
-
-        const delBtn = event.target.closest('[data-action="delete-future"]');
-        if (delBtn) {
-          if (!confirm("Удалить запись?")) return;
-          await dbDelete("entries", delBtn.dataset.id);
-          await renderFutureScreen();
-          return;
-        }
-
-        const addBtn = event.target.closest('[data-action="add-future"]');
-        if (addBtn) {
-          const monthStr = addBtn.dataset.month;
-          const defaultDate = monthStr + "-01";
-          openModal(defaultDate);
-          return;
-        }
-      };
-    }
-
-    function bindFutureNavEvents() {
-      document.getElementById("future-prev").addEventListener("click", async function () {
-        state.futureOffset--;
-        await renderFutureScreen();
-      });
-
-      document.getElementById("future-next").addEventListener("click", async function () {
-        state.futureOffset++;
-        await renderFutureScreen();
-      });
-    }
-
-    function openModal(defaultDate, entryToEdit) {
-      const overlay = document.getElementById("modal-overlay");
-      const titleEl = document.getElementById("modal-title");
-      const editIdEl = document.getElementById("modal-edit-id");
-
-      if (entryToEdit) {
-        titleEl.textContent = "Редактировать";
-        editIdEl.value = entryToEdit.id;
-        document.getElementById("modal-text").value = entryToEdit.text;
-        document.getElementById("modal-date").value = entryToEdit.date;
-        document.querySelectorAll(".type-btn").forEach(function (btn) {
-          btn.classList.toggle("active", btn.dataset.type === entryToEdit.type);
-        });
-      } else {
-        titleEl.textContent = "Новая запись";
-        editIdEl.value = "";
-        document.getElementById("modal-text").value = "";
-        document.getElementById("modal-date").value = defaultDate || state.currentDate;
-        document.querySelectorAll(".type-btn").forEach(function (btn) {
-          btn.classList.toggle("active", btn.dataset.type === "task");
-        });
-      }
-
-      overlay.style.display = "flex";
-      setTimeout(function () {
-        document.getElementById("modal-text").focus();
-      }, 50);
-    }
-
-    function closeModal() {
-      document.getElementById("modal-overlay").style.display = "none";
-    }
-
-    function bindModalEvents() {
-      document.querySelectorAll(".type-btn").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          document.querySelectorAll(".type-btn").forEach(function (innerBtn) {
-            innerBtn.classList.remove("active");
-          });
-          btn.classList.add("active");
-        });
-      });
-
-      document.getElementById("modal-close-btn").addEventListener("click", closeModal);
-      document.getElementById("modal-cancel-btn").addEventListener("click", closeModal);
-      document.getElementById("modal-overlay").addEventListener("click", function (event) {
-        if (event.target === this) closeModal();
-      });
-      document.getElementById("modal-save-btn").addEventListener("click", async function () {
-        const text = document.getElementById("modal-text").value.trim();
-        if (!text) {
-          document.getElementById("modal-text").focus();
-          return;
-        }
-
-        const type = (document.querySelector(".type-btn.active") || {}).dataset.type || "task";
-        const date = document.getElementById("modal-date").value || state.currentDate;
-        const editId = document.getElementById("modal-edit-id").value;
-        const now = new Date().toISOString();
-
-        if (editId) {
-          const existing = await dbGet("entries", editId);
-          if (existing) {
-            existing.text = text;
-            existing.type = type;
-            existing.date = date;
-            existing.updatedAt = now;
-            await dbPut("entries", existing);
-          }
-        } else {
-          await dbAdd("entries", {
-            id: uid(),
-            date: date,
-            type: type,
-            text: text,
-            status: "open",
-            collectionId: null,
-            createdAt: now,
-            updatedAt: now
-          });
-        }
-        closeModal();
-        await renderTodayScreen();
-        if (document.getElementById("screen-month").classList.contains("active")) {
-          await renderMonthScreen();
-        }
-        if (document.getElementById("screen-future").classList.contains("active")) {
-          await renderFutureScreen();
-        }
-      });
-
-      document.getElementById("modal-text").addEventListener("keydown", function (event) {
-        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-          document.getElementById("modal-save-btn").click();
-        }
-        if (event.key === "Escape") closeModal();
-      });
-    }
-
-    function openEntryMenu(entryId) {
-      activeMenuEntryId = entryId;
-      document.getElementById("entry-menu-overlay").style.display = "flex";
-    }
-
-    function closeEntryMenu() {
-      activeMenuEntryId = null;
-      document.getElementById("entry-menu-overlay").style.display = "none";
-    }
-
-    function bindEntryMenuEvents() {
-      document.getElementById("entry-menu-overlay").addEventListener("click", function (event) {
-        if (event.target === this) closeEntryMenu();
-      });
-
-      document.getElementById("menu-migrate").addEventListener("click", async function () {
-        if (!activeMenuEntryId) return;
-        const entry = await dbGet("entries", activeMenuEntryId);
-        if (!entry) return;
-        entry.date = addDays(entry.date, 1);
-        entry.status = "migrated";
-        entry.updatedAt = new Date().toISOString();
-        await dbPut("entries", entry);
-        closeEntryMenu();
-        await renderTodayScreen();
-      });
-
-      document.getElementById("menu-future").addEventListener("click", async function () {
-        if (!activeMenuEntryId) return;
-        const entry = await dbGet("entries", activeMenuEntryId);
-        if (!entry) return;
-        entry.status = "future";
-        entry.updatedAt = new Date().toISOString();
-        await dbPut("entries", entry);
-        closeEntryMenu();
-        await renderTodayScreen();
-      });
-
-      document.getElementById("menu-edit").addEventListener("click", async function () {
-        if (!activeMenuEntryId) return;
-        const entry = await dbGet("entries", activeMenuEntryId);
-        if (!entry) return;
-        closeEntryMenu();
-        openModal(entry.date, entry);
-      });
-
-      document.getElementById("menu-delete").addEventListener("click", async function () {
-        if (!activeMenuEntryId) return;
-        if (!confirm("Удалить запись?")) return;
-        await dbDelete("entries", activeMenuEntryId);
-        closeEntryMenu();
-        await renderTodayScreen();
-      });
-    }
-
-    async function seedDemoDataIfNeeded() {
-      const allEntries = await dbGetAll("entries");
-      if (allEntries.length > 0) return;
-
-      const nowIso = new Date().toISOString();
-      const today = todayStr();
-      const yesterday = addDays(today, -1);
-
-      const demo = [
-        {
-          id: uid(),
-          date: today,
-          type: "task",
-          text: "Позвонить врачу",
-          status: "open",
-          collectionId: null,
-          createdAt: nowIso,
-          updatedAt: nowIso
-        },
-        {
-          id: uid(),
-          date: today,
-          type: "event",
-          text: "Встреча с командой",
-          status: "open",
-          collectionId: null,
-          createdAt: new Date(Date.now() + 1000).toISOString(),
-          updatedAt: new Date(Date.now() + 1000).toISOString()
-        },
-        {
-          id: uid(),
-          date: today,
-          type: "note",
-          text: "Идея про рабочее место",
-          status: "done",
-          collectionId: null,
-          createdAt: new Date(Date.now() + 2000).toISOString(),
-          updatedAt: new Date(Date.now() + 2000).toISOString()
-        },
-        {
-          id: uid(),
-          date: yesterday,
-          type: "task",
-          text: "Отправить отчет",
-          status: "open",
-          collectionId: null,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          updatedAt: new Date(Date.now() - 86400000).toISOString()
-        }
-      ];
-
-      for (const item of demo) {
-        await dbAdd("entries", item);
-      }
-    }
-
-    async function start() {
-      await dbInit();
-      await seedDemoDataIfNeeded();
-      bindDayNavEvents();
-      bindNavEvents();
-      bindModalEvents();
-      bindEntryMenuEvents();
-      bindMonthNavEvents();
-      bindFutureNavEvents();
-      await renderTodayScreen();
-    }
-
-    start().catch(function (error) {
-      console.error("Ошибка запуска приложения:", error);
-      alert("Ошибка запуска приложения. Откройте консоль браузера.");
-    });
-  </script>
+  <div id="migration-overlay" class="modal-overlay" style="display:none">
+    <div class="modal-sheet migration-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Миграция: итоги месяца</span>
+        <button class="modal-close" id="migration-close" type="button">✕</button>
+      </div>
+      <div class="migration-hint">
+        Разберите незакрытые задачи и несортированные идеи предыдущего месяца.
+      </div>
+      <div class="migration-section" id="migration-tasks-section">
+        <div class="migration-section-label">Незакрытые задачи</div>
+        <div id="migration-tasks-list"></div>
+      </div>
+      <div class="migration-section" id="migration-ideas-section">
+        <div class="migration-section-label">Идеи без коллекции</div>
+        <div id="migration-ideas-list"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn-save" id="migration-done" type="button">Готово</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="collection-modal-overlay" class="modal-overlay" style="display:none">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <span class="modal-title" id="coll-modal-title">Новая коллекция</span>
+        <button class="modal-close" id="coll-modal-close" type="button">✕</button>
+      </div>
+      <input type="hidden" id="coll-modal-edit-id" value="">
+      <input
+        type="text"
+        id="coll-modal-name"
+        class="modal-textarea"
+        placeholder="Название коллекции"
+        style="resize:none; height:44px; padding: 10px 12px;"
+      >
+      <div class="coll-color-row">
+        <span class="modal-label" style="width:auto; margin-right:8px">Цвет</span>
+        <div id="coll-color-picker" class="coll-color-picker"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="modal-btn-cancel" id="coll-modal-cancel" type="button">Отмена</button>
+        <button class="modal-btn-save" id="coll-modal-save" type="button">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="assign-coll-overlay" class="modal-overlay" style="display:none">
+    <div class="menu-sheet">
+      <div class="modal-header" style="margin-bottom:10px">
+        <span class="modal-title">Добавить в коллекцию</span>
+        <button class="modal-close" id="assign-coll-close" type="button">✕</button>
+      </div>
+      <div id="assign-coll-list"></div>
+    </div>
+  </div>
+
+  <script src="js/core.js"></script>
+  <script src="js/screens.js"></script>
+  <script src="js/collections.js"></script>
+  <script src="js/future.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
+

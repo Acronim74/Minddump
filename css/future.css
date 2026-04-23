@@ -1,0 +1,192 @@
+﻿    /* ===== FUTURE LOG ===== */
+
+    .future-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .future-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .future-range {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .future-header-nav {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .future-month-block {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .future-month-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--surface-2);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .future-month-header:hover {
+      background: var(--surface-3);
+    }
+
+    .future-month-name {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .future-month-name.empty {
+      color: var(--text-muted);
+    }
+
+    .future-month-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .future-month-count {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .future-month-toggle {
+      font-size: 12px;
+      color: var(--text-muted);
+      width: 16px;
+      text-align: center;
+    }
+
+    .future-month-body {
+      background: var(--surface);
+      padding: 8px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .future-month-body.collapsed {
+      display: none;
+    }
+
+    .future-entry-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+
+    .future-entry-row.status-done {
+      opacity: 0.4;
+    }
+
+    .future-entry-row.status-done .future-entry-text {
+      text-decoration: line-through;
+    }
+
+    .future-entry-row.status-irrelevant {
+      opacity: 0.4;
+    }
+
+    .future-entry-row.status-irrelevant .future-entry-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .future-entry-symbol {
+      font-size: 14px;
+      font-weight: 600;
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .future-entry-text {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .future-entry-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .future-entry-del {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .future-entry-del:hover {
+      background: rgba(245, 94, 122, 0.1);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .future-add-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .future-add-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .future-empty-body {
+      background: var(--surface);
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+

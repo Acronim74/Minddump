@@ -1,0 +1,667 @@
+﻿    async function renderTodayScreen() {
+      const screen = document.getElementById("screen-today");
+      const rawList = await dbGetByIndex("entries", "date", state.currentDate);
+
+      // На экране «Сегодня» показываем только записи дня.
+      // Записи со status="future" уехали в Полгода — их тут не показываем.
+      const list = rawList.filter(function (e) {
+        return e.status !== "future";
+      });
+
+      list.sort(function (a, b) {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+
+      const rowsHtml = list.map(function (entry) {
+        const sym = getSymbolByEntry(entry);
+        const statusClass = statusClassFor(entry);
+        const priorityHtml = renderPriorityHtml(entry);
+        return (
+          '<div class="entry-item ' + statusClass + '" data-id="' + entry.id + '">' +
+            priorityHtml +
+            '<span class="entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
+            '<span class="entry-text">' + escapeHtml(entry.text) + "</span>" +
+            '<button type="button" class="entry-action js-toggle-done">✓</button>' +
+            '<button type="button" class="entry-action js-entry-menu">···</button>' +
+          "</div>"
+        );
+      }).join("");
+
+      const emptyHtml =
+        '<div class="empty-state">' +
+          "<h3>Нет записей на сегодня</h3>" +
+          "<p>Нажмите + чтобы добавить первую</p>" +
+        "</div>";
+
+      const yesterdayDate = addDays(state.currentDate, -1);
+      const yesterdayOpen = await countOpenOnDate(yesterdayDate);
+      const yesterdayBanner =
+        yesterdayOpen > 0
+          ? '<div class="today-banner" id="today-yesterday-banner" data-date="' +
+            yesterdayDate +
+            '">⚠ Вчера осталось ' +
+            yesterdayOpen +
+            " " +
+            pluralOpen(yesterdayOpen) +
+            "</div>"
+          : "";
+
+      screen.innerHTML =
+        '<header class="today-header">' +
+          "<div>" +
+            '<h1 class="today-title">Сегодня</h1>' +
+            '<div class="today-date-subtitle">' + escapeHtml(formatDate(state.currentDate)) + "</div>" +
+          "</div>" +
+          '<button class="add-btn" id="today-add-btn" type="button" aria-label="Добавить запись">+</button>' +
+        "</header>" +
+        yesterdayBanner +
+        '<section class="entries-list">' + (rowsHtml || emptyHtml) + "</section>";
+
+      bindTodayActions();
+      renderDayNav();
+    }
+
+    function pluralOpen(n) {
+      if (n % 10 === 1 && n % 100 !== 11) return "невыполненная";
+      if ([2, 3, 4].indexOf(n % 10) !== -1 && [12, 13, 14].indexOf(n % 100) === -1) return "невыполненных";
+      return "невыполненных";
+    }
+
+    function bindTodayActions() {
+      const addBtn = document.getElementById("today-add-btn");
+      if (addBtn) {
+        addBtn.onclick = function () {
+          openModal(state.currentDate, null, null);
+        };
+      }
+
+      const yesterdayBanner = document.getElementById("today-yesterday-banner");
+      if (yesterdayBanner) {
+        yesterdayBanner.onclick = async function () {
+          const targetDate = yesterdayBanner.getAttribute("data-date");
+          if (!targetDate) return;
+          state.currentDate = targetDate;
+          await renderTodayScreen();
+        };
+      }
+
+      const toggleButtons = document.querySelectorAll(".js-toggle-done");
+      toggleButtons.forEach(function (button) {
+        button.onclick = async function (event) {
+          const row = event.currentTarget.closest(".entry-item");
+          if (!row) return;
+          const entryId = row.getAttribute("data-id");
+          const entry = await dbGet("entries", entryId);
+          if (!entry) return;
+          entry.status = entry.status === "done" ? "open" : "done";
+          entry.updatedAt = new Date().toISOString();
+          await dbPut("entries", entry);
+          await renderTodayScreen();
+        };
+      });
+
+      const menuButtons = document.querySelectorAll(".js-entry-menu");
+      menuButtons.forEach(function (button) {
+        button.onclick = function (event) {
+          const row = event.currentTarget.closest(".entry-item");
+          if (!row) return;
+          openEntryMenu(row.getAttribute("data-id"));
+        };
+      });
+    }
+
+    async function renderDayNav() {
+      const label = document.getElementById("day-nav-label");
+      const prevBtn = document.getElementById("day-prev");
+      if (label) {
+        label.textContent = formatNavDate(state.currentDate);
+      }
+      if (prevBtn) {
+        const previousDate = addDays(state.currentDate, -1);
+        const hasOpen = await hasOpenOnDate(previousDate);
+        prevBtn.classList.toggle("alert", hasOpen);
+      }
+    }
+
+    function bindDayNavEvents() {
+      const prevBtn = document.getElementById("day-prev");
+      const nextBtn = document.getElementById("day-next");
+
+      prevBtn.addEventListener("click", async function () {
+        state.currentDate = addDays(state.currentDate, -1);
+        await renderTodayScreen();
+      });
+
+      nextBtn.addEventListener("click", async function () {
+        state.currentDate = addDays(state.currentDate, 1);
+        await renderTodayScreen();
+      });
+    }
+
+    function switchToScreen(target) {
+      const allNavBtns = document.querySelectorAll(".nav-btn, .sidebar-btn");
+      const screens = {
+        today: document.getElementById("screen-today"),
+        month: document.getElementById("screen-month"),
+        future: document.getElementById("screen-future"),
+        collections: document.getElementById("screen-collections"),
+        settings: document.getElementById("screen-settings")
+      };
+      const dayNav = document.getElementById("day-nav");
+
+      allNavBtns.forEach(function (btn) {
+        btn.classList.toggle("active", btn.getAttribute("data-screen") === target);
+      });
+      Object.keys(screens).forEach(function (key) {
+        if (screens[key]) screens[key].classList.toggle("active", key === target);
+      });
+      dayNav.classList.toggle("hidden", target !== "today");
+    }
+
+    async function renderMonthScreen() {
+      const year = state.currentYear;
+      const month = state.currentMonth;
+
+      const titleEl = document.getElementById("month-title");
+      titleEl.textContent = new Date(year, month, 1).toLocaleDateString("ru-RU", {
+        month: "long",
+        year: "numeric"
+      });
+
+      const allEntries = await dbGetAll("entries");
+      const monthStr = monthStrFromYM(year, month);
+      const monthEntries = allEntries.filter(function (e) {
+        return e.date && e.date.startsWith(monthStr);
+      });
+
+      // На Monthly Log ничего не попадает автоматически.
+      // В хронологию показываем только задачи/события, явно поднятые (raised=true).
+      const chronologyEntries = monthEntries.filter(function (e) {
+        if (!e.raised) return false;
+        return e.type === "task" || e.type === "event";
+      });
+
+      const byDate = {};
+      chronologyEntries.forEach(function (e) {
+        if (!byDate[e.date]) byDate[e.date] = [];
+        byDate[e.date].push(e);
+      });
+
+      const today = todayStr();
+      const sortedDates = Object.keys(byDate).sort();
+
+      const listEl = document.getElementById("month-entries-list");
+
+      if (!sortedDates.length) {
+        listEl.innerHTML = '<div class="month-empty">Нет записей за этот месяц</div>';
+      } else {
+        listEl.innerHTML = sortedDates.map(function (dateStr) {
+          const entries = byDate[dateStr];
+          const dayNum = parseInt(dateStr.split("-")[2], 10);
+          const isToday = dateStr === today;
+          const hasOpen = entries.some(function (e) {
+            return e.status === "open";
+          });
+
+          let badgeClass = "month-day-num-badge";
+          if (isToday) badgeClass += " is-today";
+          else if (hasOpen) badgeClass += " has-open";
+
+          const entriesHtml = entries.map(function (entry) {
+            const sym = getSymbolByEntry(entry);
+            const statusClass = statusClassFor(entry);
+            const priorityHtml = renderPriorityHtml(entry);
+            return (
+              '<div class="month-entry-row ' + statusClass + '" data-id="' + entry.id + '">' +
+                priorityHtml +
+                '<span class="month-entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
+                '<span class="month-entry-text">' + escapeHtml(entry.text) + "</span>" +
+              "</div>"
+            );
+          }).join("");
+
+          return (
+            '<div class="month-day-block">' +
+              '<div class="month-day-num-col">' +
+                '<div class="' + badgeClass + '" data-date="' + dateStr + '">' + dayNum + "</div>" +
+                (entries.length > 1 ? '<div class="month-day-line"></div>' : "") +
+              "</div>" +
+              '<div class="month-day-entries-col">' + entriesHtml + "</div>" +
+            "</div>"
+          );
+        }).join("");
+      }
+
+      // В блок «Идеи месяца» попадают только note, явно поднятые (raised=true).
+      const ideas = monthEntries.filter(function (e) {
+        return e.type === "note" && e.raised;
+      });
+      const ideasSection = document.getElementById("month-ideas-section");
+      const ideasList = document.getElementById("month-ideas-list");
+
+      if (!ideas.length) {
+        ideasSection.style.display = "none";
+        ideasList.innerHTML = "";
+      } else {
+        ideasSection.style.display = "block";
+        ideasList.innerHTML = ideas.map(function (entry) {
+          const priorityHtml = renderPriorityHtml(entry);
+          return (
+            '<div class="month-idea-row" data-id="' + entry.id + '">' +
+              priorityHtml +
+              '<span class="month-idea-symbol">—</span>' +
+              '<span class="month-idea-text">' + escapeHtml(entry.text) + "</span>" +
+              '<div class="month-idea-actions">' +
+                '<button class="month-idea-btn" data-action="to-coll" data-id="' + entry.id + '" type="button">→ В коллекцию</button>' +
+                '<button class="month-idea-btn to-task" data-action="to-task" data-id="' + entry.id + '" type="button">↻ В задачу</button>' +
+                '<button class="month-idea-btn danger" data-action="forget" data-id="' + entry.id + '" type="button">Забыть</button>' +
+              "</div>" +
+            "</div>"
+          );
+        }).join("");
+      }
+
+      await renderMigrationBanner();
+      bindMonthEvents();
+    }
+
+    async function renderMigrationBanner() {
+      const host = document.getElementById("month-entries-list");
+      if (!host) return;
+
+      const existing = document.getElementById("migration-banner");
+      if (existing) existing.remove();
+
+      const now = new Date();
+      const isCurrentMonth =
+        state.currentYear === now.getFullYear() && state.currentMonth === now.getMonth();
+      if (!isCurrentMonth) return;
+
+      const prev = prevMonthYM(state.currentYear, state.currentMonth);
+      const prevStr = monthStrFromYM(prev.year, prev.month);
+      const allEntries = await dbGetAll("entries");
+
+      const unclosedTasks = allEntries.filter(function (e) {
+        return (
+          e.date &&
+          e.date.startsWith(prevStr) &&
+          e.type === "task" &&
+          e.status === "open"
+        );
+      });
+      const looseIdeas = allEntries.filter(function (e) {
+        return (
+          e.date &&
+          e.date.startsWith(prevStr) &&
+          e.type === "note" &&
+          !e.collectionId
+        );
+      });
+
+      if (unclosedTasks.length === 0 && looseIdeas.length === 0) return;
+
+      const prevLabel = new Date(prev.year, prev.month, 1).toLocaleDateString("ru-RU", {
+        month: "long"
+      });
+
+      const banner = document.createElement("div");
+      banner.id = "migration-banner";
+      banner.className = "migration-banner";
+      banner.innerHTML =
+        '<div class="migration-banner-icon">📋</div>' +
+        '<div class="migration-banner-body">' +
+          '<div class="migration-banner-title">Пора подвести итоги — ' +
+          escapeHtml(prevLabel) +
+          "</div>" +
+          '<div class="migration-banner-meta">Незакрытых: ' +
+          unclosedTasks.length +
+          " · Идей без коллекции: " +
+          looseIdeas.length +
+          "</div>" +
+        "</div>" +
+        '<button class="migration-banner-btn" id="migration-start-btn" type="button">Начать миграцию</button>';
+
+      host.parentElement.insertBefore(banner, host);
+
+      document
+        .getElementById("migration-start-btn")
+        .addEventListener("click", function () {
+          openMigrationModal(unclosedTasks, looseIdeas);
+        });
+    }
+
+    function bindMonthEvents() {
+      const listEl = document.getElementById("month-entries-list");
+      listEl.onclick = async function (event) {
+        const row = event.target.closest(".month-entry-row");
+        if (row) {
+          const entry = await dbGet("entries", row.dataset.id);
+          if (!entry) return;
+          state.currentDate = entry.date;
+          switchToScreen("today");
+          await renderTodayScreen();
+          openModal(entry.date, entry, null);
+          return;
+        }
+        const badge = event.target.closest(".month-day-num-badge");
+        if (badge && badge.dataset.date) {
+          state.currentDate = badge.dataset.date;
+          switchToScreen("today");
+          await renderTodayScreen();
+        }
+      };
+
+      const ideasList = document.getElementById("month-ideas-list");
+      ideasList.onclick = async function (event) {
+        const btn = event.target.closest("[data-action]");
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        const entry = await dbGet("entries", id);
+        if (!entry) return;
+
+        if (action === "to-task") {
+          entry.type = "task";
+          entry.updatedAt = new Date().toISOString();
+          await dbPut("entries", entry);
+          await renderMonthScreen();
+        }
+
+        if (action === "to-coll") {
+          await openAssignCollModal(id);
+        }
+
+        if (action === "forget") {
+          if (!confirm("Удалить идею?")) return;
+          await dbDelete("entries", id);
+          await renderMonthScreen();
+        }
+      };
+    }
+
+    function bindMonthNavEvents() {
+      document.getElementById("month-prev").addEventListener("click", async function () {
+        state.currentMonth--;
+        if (state.currentMonth < 0) {
+          state.currentMonth = 11;
+          state.currentYear--;
+        }
+        await renderMonthScreen();
+      });
+
+      document.getElementById("month-next").addEventListener("click", async function () {
+        state.currentMonth++;
+        if (state.currentMonth > 11) {
+          state.currentMonth = 0;
+          state.currentYear++;
+        }
+        await renderMonthScreen();
+      });
+    }
+
+    function bindNavEvents() {
+      const navButtons = document.querySelectorAll(".nav-btn, .sidebar-btn");
+
+      navButtons.forEach(function (button) {
+        button.addEventListener("click", async function () {
+          const target = button.getAttribute("data-screen");
+          switchToScreen(target);
+          if (target === "month") {
+            await renderMonthScreen();
+          }
+          if (target === "future") {
+            await renderFutureScreen();
+          }
+          if (target === "collections") {
+            await renderCollectionsScreen();
+          }
+        });
+      });
+    }
+
+    function openMigrationModal(tasks, ideas) {
+      const overlay = document.getElementById("migration-overlay");
+
+      const tasksSection = document.getElementById("migration-tasks-section");
+      const tasksList = document.getElementById("migration-tasks-list");
+      if (tasks.length === 0) {
+        tasksSection.style.display = "none";
+        tasksList.innerHTML = "";
+      } else {
+        tasksSection.style.display = "block";
+        tasksList.innerHTML = tasks
+          .map(function (entry) {
+            return (
+              '<div class="migration-item" data-id="' +
+              entry.id +
+              '">' +
+                '<div class="migration-item-text">· ' +
+                escapeHtml(entry.text) +
+                "</div>" +
+                '<div class="migration-item-actions">' +
+                  '<button class="migration-btn" data-action="migrate-next" data-id="' +
+                  entry.id +
+                  '" type="button" title="Перенести на следующий месяц">›</button>' +
+                  '<button class="migration-btn" data-action="to-future" data-id="' +
+                  entry.id +
+                  '" type="button" title="Отложить в Полгода">‹</button>' +
+                  '<button class="migration-btn danger" data-action="irrelevant" data-id="' +
+                  entry.id +
+                  '" type="button" title="Неактуально">~</button>' +
+                "</div>" +
+              "</div>"
+            );
+          })
+          .join("");
+      }
+
+      const ideasSection = document.getElementById("migration-ideas-section");
+      const ideasList = document.getElementById("migration-ideas-list");
+      if (ideas.length === 0) {
+        ideasSection.style.display = "none";
+        ideasList.innerHTML = "";
+      } else {
+        ideasSection.style.display = "block";
+        ideasList.innerHTML = ideas
+          .map(function (entry) {
+            return (
+              '<div class="migration-item" data-id="' +
+              entry.id +
+              '">' +
+                '<div class="migration-item-text">— ' +
+                escapeHtml(entry.text) +
+                "</div>" +
+                '<div class="migration-item-actions">' +
+                  '<button class="migration-btn" data-action="idea-to-coll" data-id="' +
+                  entry.id +
+                  '" type="button" title="В коллекцию">→</button>' +
+                  '<button class="migration-btn" data-action="idea-to-task" data-id="' +
+                  entry.id +
+                  '" type="button" title="В задачу">↻</button>' +
+                  '<button class="migration-btn danger" data-action="idea-forget" data-id="' +
+                  entry.id +
+                  '" type="button" title="Забыть">×</button>' +
+                "</div>" +
+              "</div>"
+            );
+          })
+          .join("");
+      }
+
+      overlay.style.display = "flex";
+    }
+
+    function closeMigrationModal() {
+      document.getElementById("migration-overlay").style.display = "none";
+    }
+
+    function bindMigrationEvents() {
+      const overlay = document.getElementById("migration-overlay");
+      overlay.addEventListener("click", function (event) {
+        if (event.target === this) closeMigrationModal();
+      });
+      document.getElementById("migration-close").addEventListener("click", closeMigrationModal);
+      document.getElementById("migration-done").addEventListener("click", async function () {
+        closeMigrationModal();
+        await renderMonthScreen();
+      });
+
+      const tasksList = document.getElementById("migration-tasks-list");
+      tasksList.addEventListener("click", async function (event) {
+        const btn = event.target.closest("[data-action]");
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const entry = await dbGet("entries", id);
+        if (!entry) return;
+        const now = new Date().toISOString();
+
+        if (btn.dataset.action === "migrate-next") {
+          // Перенести в следующий месяц: первое число нового месяца
+          const parts = entry.date.split("-");
+          let y = parseInt(parts[0], 10);
+          let m = parseInt(parts[1], 10);
+          m++;
+          if (m > 12) {
+            m = 1;
+            y++;
+          }
+          entry.date = y + "-" + String(m).padStart(2, "0") + "-01";
+          entry.status = "migrated";
+        } else if (btn.dataset.action === "to-future") {
+          entry.status = "future";
+        } else if (btn.dataset.action === "irrelevant") {
+          entry.status = "irrelevant";
+        }
+
+        entry.updatedAt = now;
+        await dbPut("entries", entry);
+
+        const item = btn.closest(".migration-item");
+        if (item) item.remove();
+      });
+
+      const ideasList = document.getElementById("migration-ideas-list");
+      ideasList.addEventListener("click", async function (event) {
+        const btn = event.target.closest("[data-action]");
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const entry = await dbGet("entries", id);
+        if (!entry) return;
+        const now = new Date().toISOString();
+
+        if (btn.dataset.action === "idea-to-coll") {
+          closeMigrationModal();
+          await openAssignCollModal(id);
+          return;
+        }
+
+        if (btn.dataset.action === "idea-to-task") {
+          entry.type = "task";
+          entry.updatedAt = now;
+          await dbPut("entries", entry);
+        }
+
+        if (btn.dataset.action === "idea-forget") {
+          await dbDelete("entries", id);
+        }
+
+        const item = btn.closest(".migration-item");
+        if (item) item.remove();
+      });
+    }
+
+    function bindSettingsEvents() {
+      document.getElementById("export-btn").addEventListener("click", async function () {
+        const entries = await dbGetAll("entries");
+        const collections = await dbGetAll("collections");
+        const data = {
+          version: 2,
+          exportedAt: new Date().toISOString(),
+          entries: entries,
+          collections: collections
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "minddump-" + todayStr() + ".json";
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById("import-file").addEventListener("change", async function (event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const text = await file.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (_error) {
+          alert("Ошибка: файл повреждён или не является JSON");
+          event.target.value = "";
+          return;
+        }
+
+        if (!Array.isArray(data.entries) || !Array.isArray(data.collections)) {
+          alert("Ошибка: неверный формат файла");
+          event.target.value = "";
+          return;
+        }
+
+        if (
+          !confirm(
+            "Импортировать данные?\n\n" +
+              "Записей: " +
+              data.entries.length +
+              "\n" +
+              "Коллекций: " +
+              data.collections.length +
+              "\n\n" +
+              "Существующие данные будут объединены с импортируемыми."
+          )
+        ) {
+          event.target.value = "";
+          return;
+        }
+
+        for (const collection of data.collections) {
+          const existingCollection = await dbGet("collections", collection.id);
+          if (!existingCollection) {
+            await dbAdd("collections", collection);
+          }
+        }
+
+        for (const entry of data.entries) {
+          const existingEntry = await dbGet("entries", entry.id);
+          if (!existingEntry) {
+            if (entry.priority === undefined) entry.priority = null;
+            if (entry.raised === undefined) entry.raised = false;
+            await dbAdd("entries", entry);
+          }
+        }
+
+        event.target.value = "";
+        alert("Импорт завершён");
+        await renderTodayScreen();
+      });
+
+      document.getElementById("clear-btn").addEventListener("click", async function () {
+        if (!confirm("Удалить ВСЕ данные?\nЭто действие нельзя отменить.")) return;
+        if (!confirm("Вы уверены? Все записи и коллекции будут удалены навсегда.")) return;
+
+        const entries = await dbGetAll("entries");
+        const collections = await dbGetAll("collections");
+
+        for (const entry of entries) {
+          await dbDelete("entries", entry.id);
+        }
+        for (const collection of collections) {
+          await dbDelete("collections", collection.id);
+        }
+
+        await renderTodayScreen();
+        alert("Данные удалены");
+      });
+    }
+
