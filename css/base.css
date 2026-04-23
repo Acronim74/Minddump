@@ -147,11 +147,13 @@
       opacity: 0.55;
     }
 
-    .entry-item.status-irrelevant {
+    .entry-item.status-irrelevant,
+    .entry-item.status-forgotten {
       opacity: 0.4;
     }
 
-    .entry-item.status-irrelevant .entry-text {
+    .entry-item.status-irrelevant .entry-text,
+    .entry-item.status-forgotten .entry-text {
       text-decoration: line-through;
       color: var(--text-muted);
     }

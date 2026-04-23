@@ -84,9 +84,32 @@
       }
     }
 
+    // SPEC §5: unsorted notes auto-migrate into the new month. At app start we
+    // pull any note whose `collectionId` is null and whose `month` lies in the
+    // past up to the current month. `date` and `createdAt` are preserved for
+    // history. Notes attached to a collection never auto-migrate.
+    async function autoMigrateLooseNotes() {
+      const entries = await dbGetAll("entries");
+      const now = new Date();
+      const curMonthStr =
+        now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+
+      for (const entry of entries) {
+        if (entry.type !== "note") continue;
+        if (entry.collectionId) continue;
+        if (entry.status === "forgotten") continue;
+        if (!entry.month || entry.month >= curMonthStr) continue;
+
+        entry.month = curMonthStr;
+        entry.updatedAt = new Date().toISOString();
+        await dbPut("entries", entry);
+      }
+    }
+
     async function start() {
       await dbInit();
       await migrateSchemaIfNeeded();
+      await autoMigrateLooseNotes();
       await seedDemoDataIfNeeded();
       bindDayNavEvents();
       bindNavEvents();

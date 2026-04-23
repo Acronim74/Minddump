@@ -246,11 +246,13 @@
       opacity: 0.55;
     }
 
-    .month-entry-row.status-irrelevant {
+    .month-entry-row.status-irrelevant,
+    .month-entry-row.status-forgotten {
       opacity: 0.4;
     }
 
-    .month-entry-row.status-irrelevant .month-entry-text {
+    .month-entry-row.status-irrelevant .month-entry-text,
+    .month-entry-row.status-forgotten .month-entry-text {
       text-decoration: line-through;
       color: var(--text-muted);
     }
@@ -304,6 +306,16 @@
 
     .migration-banner-btn:hover {
       background: rgba(245, 166, 35, 0.12);
+    }
+
+    /* Notes overflow banner reuses migration-banner layout but with a cooler palette. */
+    .migration-banner.notes-overflow-banner {
+      background: rgba(196, 181, 253, 0.07);
+      border-color: rgba(196, 181, 253, 0.4);
+    }
+
+    .migration-banner.notes-overflow-banner .migration-banner-title {
+      color: #c4b5fd;
     }
 
     .month-day-header-row {

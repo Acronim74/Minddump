@@ -19,7 +19,8 @@
       currentMonth: nowDate.getMonth(),
       currentYear: nowDate.getFullYear(),
       futureOffset: 0,
-      collActiveMenuEntryId: null
+      collActiveMenuEntryId: null,
+      notesOverflowThreshold: 50
     };
     let activeMenuEntryId = null;
 
@@ -218,7 +219,7 @@
       if (entry.status === "future") {
         return { char: "‹", color: "#c4b5fd" };
       }
-      if (entry.status === "irrelevant") {
+      if (entry.status === "forgotten" || entry.status === "irrelevant") {
         return { char: "~", color: "var(--text-muted)" };
       }
       if (entry.type === "event") {

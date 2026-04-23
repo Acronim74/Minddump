@@ -313,6 +313,7 @@
       }
 
       await renderMigrationBanner();
+      await renderNotesOverflowBanner();
       bindMonthEvents();
     }
 
@@ -344,6 +345,12 @@
       return n + " " + word;
     }
 
+    // "Пора подвести итоги" — shown on the CURRENT month view when either:
+    //   (a) today is within the last 2 days of the current month (early warning), or
+    //   (b) the previous month still has unclosed tasks or unsorted notes
+    //       (late reminder — the user didn't finish the ritual on time).
+    // In case (a) the target month is the current one; in case (b) it is the previous.
+    // The banner disappears only once the target month has nothing to review.
     async function renderMigrationBanner() {
       const host = document.getElementById("month-entries-list");
       if (!host) return;
@@ -356,22 +363,65 @@
         state.currentYear === now.getFullYear() && state.currentMonth === now.getMonth();
       if (!isCurrentMonth) return;
 
+      const curStr = monthStrFromYM(state.currentYear, state.currentMonth);
       const prev = prevMonthYM(state.currentYear, state.currentMonth);
       const prevStr = monthStrFromYM(prev.year, prev.month);
+
+      const daysInCurMonth = new Date(state.currentYear, state.currentMonth + 1, 0).getDate();
+      const withinLastTwoDays = now.getDate() >= daysInCurMonth - 1;
+
       const allEntries = await dbGetAll("entries");
 
-      const unclosedTasks = allEntries.filter(function (e) {
+      const prevUnclosedTasks = allEntries.filter(function (e) {
         return e.month === prevStr && e.type === "task" && e.status === "open";
       });
-      const looseIdeas = allEntries.filter(function (e) {
-        return e.month === prevStr && e.type === "note" && !e.collectionId;
+      const prevLooseNotes = allEntries.filter(function (e) {
+        return (
+          e.month === prevStr &&
+          e.type === "note" &&
+          !e.collectionId &&
+          e.status !== "forgotten"
+        );
       });
 
-      if (unclosedTasks.length === 0 && looseIdeas.length === 0) return;
+      // Determine which month is "on the ritual table" and which records to show.
+      let targetMonthStr;
+      let targetLabel;
+      let tasksToReview;
+      let notesToReview;
 
-      const prevLabel = new Date(prev.year, prev.month, 1).toLocaleDateString("ru-RU", {
-        month: "long"
-      });
+      if (prevUnclosedTasks.length > 0 || prevLooseNotes.length > 0) {
+        // Late reminder: finish last month first.
+        targetMonthStr = prevStr;
+        targetLabel = new Date(prev.year, prev.month, 1).toLocaleDateString("ru-RU", {
+          month: "long"
+        });
+        tasksToReview = prevUnclosedTasks;
+        notesToReview = prevLooseNotes;
+      } else if (withinLastTwoDays) {
+        // Early warning for the current month.
+        const curUnclosedTasks = allEntries.filter(function (e) {
+          return e.month === curStr && e.type === "task" && e.status === "open";
+        });
+        const curLooseNotes = allEntries.filter(function (e) {
+          return (
+            e.month === curStr &&
+            e.type === "note" &&
+            !e.collectionId &&
+            e.status !== "forgotten"
+          );
+        });
+        if (curUnclosedTasks.length === 0 && curLooseNotes.length === 0) return;
+        targetMonthStr = curStr;
+        targetLabel = new Date(state.currentYear, state.currentMonth, 1).toLocaleDateString(
+          "ru-RU",
+          { month: "long" }
+        );
+        tasksToReview = curUnclosedTasks;
+        notesToReview = curLooseNotes;
+      } else {
+        return;
+      }
 
       const banner = document.createElement("div");
       banner.id = "migration-banner";
@@ -380,12 +430,12 @@
         '<div class="migration-banner-icon">📋</div>' +
         '<div class="migration-banner-body">' +
           '<div class="migration-banner-title">Пора подвести итоги — ' +
-          escapeHtml(prevLabel) +
+          escapeHtml(targetLabel) +
           "</div>" +
           '<div class="migration-banner-meta">Незакрытых: ' +
-          unclosedTasks.length +
+          tasksToReview.length +
           " · Заметок без коллекции: " +
-          looseIdeas.length +
+          notesToReview.length +
           "</div>" +
         "</div>" +
         '<button class="migration-banner-btn" id="migration-start-btn" type="button">Начать миграцию</button>';
@@ -395,8 +445,44 @@
       document
         .getElementById("migration-start-btn")
         .addEventListener("click", function () {
-          openMigrationModal(unclosedTasks, looseIdeas);
+          openMigrationModal(tasksToReview, notesToReview, targetMonthStr);
         });
+    }
+
+    // "Пора разобрать заметки" — separate banner driven by the DB-wide count of
+    // uncategorised notes. Threshold is configurable (SPEC §1 setting, default 50).
+    async function renderNotesOverflowBanner() {
+      const host = document.getElementById("month-entries-list");
+      if (!host) return;
+      const existing = document.getElementById("notes-overflow-banner");
+      if (existing) existing.remove();
+
+      const threshold = state.notesOverflowThreshold || 50;
+      const allEntries = await dbGetAll("entries");
+      const looseCount = allEntries.filter(function (e) {
+        return (
+          e.type === "note" &&
+          !e.collectionId &&
+          e.status !== "forgotten"
+        );
+      }).length;
+      if (looseCount < threshold) return;
+
+      const banner = document.createElement("div");
+      banner.id = "notes-overflow-banner";
+      banner.className = "migration-banner notes-overflow-banner";
+      banner.innerHTML =
+        '<div class="migration-banner-icon">🗂️</div>' +
+        '<div class="migration-banner-body">' +
+          '<div class="migration-banner-title">Пора разобрать заметки</div>' +
+          '<div class="migration-banner-meta">В базе ' +
+          looseCount +
+          " заметок без коллекции (порог " +
+          threshold +
+          "). Загляните в Месяц прошлых периодов и разложите их по коллекциям.</div>" +
+        "</div>";
+
+      host.parentElement.insertBefore(banner, host);
     }
 
     function bindMonthEvents() {
@@ -441,6 +527,7 @@
 
         if (action === "to-task") {
           entry.type = "task";
+          entry.status = "open";
           entry.updatedAt = new Date().toISOString();
           await dbPut("entries", entry);
           await renderMonthScreen();
@@ -451,8 +538,10 @@
         }
 
         if (action === "forget") {
-          if (!confirm("Удалить заметку?")) return;
-          await dbDelete("entries", id);
+          // SPEC §9: "Забыть" — soft-статус, не hard delete.
+          entry.status = "forgotten";
+          entry.updatedAt = new Date().toISOString();
+          await dbPut("entries", entry);
           await renderMonthScreen();
         }
       };
@@ -498,8 +587,13 @@
       });
     }
 
-    function openMigrationModal(tasks, ideas) {
+    // `targetMonthStr` is the YYYY-MM of the month under review. It will be
+    // consumed in Phase 4b by the day/month pickers so that, e.g., "В Полгода"
+    // shows months relative to the source, and "В следующий месяц" knows which
+    // month to skip to.
+    function openMigrationModal(tasks, ideas, targetMonthStr) {
       const overlay = document.getElementById("migration-overlay");
+      overlay.dataset.targetMonth = targetMonthStr || "";
 
       const tasksSection = document.getElementById("migration-tasks-section");
       const tasksList = document.getElementById("migration-tasks-list");
@@ -595,21 +689,51 @@
         const now = new Date().toISOString();
 
         if (btn.dataset.action === "migrate-next") {
-          // Перенести в следующий месяц: первое число нового месяца
-          const parts = entry.date.split("-");
-          let y = parseInt(parts[0], 10);
-          let m = parseInt(parts[1], 10);
+          // SPEC §5: "В следующий месяц" по умолчанию кладёт задачу в блок
+          // «Без даты» следующего месяца. Выбор конкретного дня будет добавлен
+          // в следующем под-коммите Phase 4b.
+          const sourceMonth = entry.month || (entry.date ? entry.date.slice(0, 7) : null);
+          let y, m;
+          if (sourceMonth) {
+            y = parseInt(sourceMonth.slice(0, 4), 10);
+            m = parseInt(sourceMonth.slice(5, 7), 10);
+          } else {
+            const nowD = new Date();
+            y = nowD.getFullYear();
+            m = nowD.getMonth() + 1;
+          }
           m++;
           if (m > 12) {
             m = 1;
             y++;
           }
-          entry.date = y + "-" + String(m).padStart(2, "0") + "-01";
-          entry.status = "migrated";
+          entry.month = y + "-" + String(m).padStart(2, "0");
+          entry.date = null;
+          entry.status = "open";
         } else if (btn.dataset.action === "to-future") {
-          entry.status = "future";
+          // SPEC §5: "В Полгода" = запись уходит вперёд как задача без конкретной даты.
+          // Для базового поведения кладём на +3 месяца вперёд. Выбор конкретного
+          // месяца в рамках 6-месячного горизонта — в Phase 4b.
+          const sourceMonth = entry.month || (entry.date ? entry.date.slice(0, 7) : null);
+          let y, m;
+          if (sourceMonth) {
+            y = parseInt(sourceMonth.slice(0, 4), 10);
+            m = parseInt(sourceMonth.slice(5, 7), 10);
+          } else {
+            const nowD = new Date();
+            y = nowD.getFullYear();
+            m = nowD.getMonth() + 1;
+          }
+          m += 3;
+          while (m > 12) {
+            m -= 12;
+            y++;
+          }
+          entry.month = y + "-" + String(m).padStart(2, "0");
+          entry.date = null;
+          entry.status = "open";
         } else if (btn.dataset.action === "irrelevant") {
-          entry.status = "irrelevant";
+          entry.status = "forgotten";
         }
 
         entry.updatedAt = now;
@@ -636,12 +760,17 @@
 
         if (btn.dataset.action === "idea-to-task") {
           entry.type = "task";
+          entry.status = "open";
           entry.updatedAt = now;
           await dbPut("entries", entry);
         }
 
         if (btn.dataset.action === "idea-forget") {
-          await dbDelete("entries", id);
+          // SPEC §9: "Забыть" — это soft-статус, не hard delete. Запись остаётся
+          // в БД перечёркнутой и не мешает активным спискам.
+          entry.status = "forgotten";
+          entry.updatedAt = now;
+          await dbPut("entries", entry);
         }
 
         const item = btn.closest(".migration-item");

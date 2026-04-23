@@ -125,11 +125,13 @@
       text-decoration: line-through;
     }
 
-    .coll-entry-row.status-irrelevant {
+    .coll-entry-row.status-irrelevant,
+    .coll-entry-row.status-forgotten {
       opacity: 0.4;
     }
 
-    .coll-entry-row.status-irrelevant .coll-entry-text {
+    .coll-entry-row.status-irrelevant .coll-entry-text,
+    .coll-entry-row.status-forgotten .coll-entry-text {
       text-decoration: line-through;
       color: var(--text-muted);
     }

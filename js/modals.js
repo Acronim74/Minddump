@@ -260,7 +260,7 @@
         if (!activeMenuEntryId) return;
         const entry = await dbGet("entries", activeMenuEntryId);
         if (!entry) return;
-        entry.status = entry.status === "irrelevant" ? "open" : "irrelevant";
+        entry.status = entry.status === "forgotten" ? "open" : "forgotten";
         entry.updatedAt = new Date().toISOString();
         await dbPut("entries", entry);
         closeEntryMenu();
