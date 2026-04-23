@@ -1,11 +1,10 @@
 ﻿    function getFutureMonths() {
-      // Future Log covers the next 6 months starting from the month after current.
-      // With `futureOffset=0` user sees months [now+1 .. now+6].
-      // Arrows shift the window by ±6 months; current and past months are still
-      // reachable via the ← arrow.
+      // Future Log covers 6 months starting from the current month.
+      // With `futureOffset=0` user sees months [now .. now+5].
+      // Arrows shift the window by ±6 months.
       const result = [];
       const now = new Date();
-      let startMonth = now.getMonth() + 1 + state.futureOffset * 6;
+      let startMonth = now.getMonth() + state.futureOffset * 6;
       let startYear = now.getFullYear();
 
       while (startMonth < 0) {

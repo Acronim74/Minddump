@@ -194,55 +194,69 @@
 
       const allEntries = await dbGetAll("entries");
       const monthStr = monthStrFromYM(year, month);
-      const monthEntries = allEntries.filter(function (e) {
-        return e.date && e.date.startsWith(monthStr);
-      });
-
-      // На Monthly Log ничего не попадает автоматически.
-      // В хронологию показываем только задачи/события, явно поднятые (raised=true).
-      const chronologyEntries = monthEntries.filter(function (e) {
-        if (!e.raised) return false;
-        return e.type === "task" || e.type === "event";
-      });
-
-      const byDate = {};
-      chronologyEntries.forEach(function (e) {
-        if (!byDate[e.date]) byDate[e.date] = [];
-        byDate[e.date].push(e);
-      });
-
       const today = todayStr();
-      const sortedDates = Object.keys(byDate).sort();
+
+      // Month view shows everything that belongs to this month via `entry.month`:
+      //  - tasks and events (dated → by day; undated → "Без даты" block)
+      //  - notes without a collection (dated → by day; undated → "Заметки месяца")
+      //  - notes attached to a collection are hidden (they live in the collection)
+      //  - forgotten entries are hidden
+      const monthEntries = allEntries.filter(function (e) {
+        if (e.month !== monthStr) return false;
+        if (e.status === "forgotten") return false;
+        if (e.type === "note" && e.collectionId) return false;
+        return true;
+      });
+
+      const inDays = {};
+      const undatedTaskEvent = [];
+      const undatedNotes = [];
+
+      monthEntries.forEach(function (e) {
+        if (e.date) {
+          if (!inDays[e.date]) inDays[e.date] = [];
+          inDays[e.date].push(e);
+        } else if (e.type === "note") {
+          undatedNotes.push(e);
+        } else {
+          undatedTaskEvent.push(e);
+        }
+      });
+
+      // "Без даты" (task/event without a date). Hidden when empty.
+      const undatedSection = document.getElementById("month-undated-section");
+      const undatedList = document.getElementById("month-undated-list");
+      if (!undatedTaskEvent.length) {
+        undatedSection.style.display = "none";
+        undatedList.innerHTML = "";
+      } else {
+        undatedTaskEvent.sort(compareTodayEntries);
+        undatedSection.style.display = "block";
+        undatedList.innerHTML = undatedTaskEvent.map(renderMonthEntryRow).join("");
+      }
 
       const listEl = document.getElementById("month-entries-list");
+      const sortedDates = Object.keys(inDays).sort();
 
       if (!sortedDates.length) {
-        listEl.innerHTML = '<div class="month-empty">Нет записей за этот месяц</div>';
+        listEl.innerHTML = undatedTaskEvent.length
+          ? ""
+          : '<div class="month-empty">Нет записей за этот месяц</div>';
       } else {
         listEl.innerHTML = sortedDates.map(function (dateStr) {
-          const entries = byDate[dateStr];
+          const entries = inDays[dateStr].slice().sort(compareTodayEntries);
           const dayNum = parseInt(dateStr.split("-")[2], 10);
           const isToday = dateStr === today;
           const hasOpen = entries.some(function (e) {
-            return e.status === "open";
+            return e.type === "task" && e.status === "open";
           });
 
           let badgeClass = "month-day-num-badge";
           if (isToday) badgeClass += " is-today";
           else if (hasOpen) badgeClass += " has-open";
 
-          const entriesHtml = entries.map(function (entry) {
-            const sym = getSymbolByEntry(entry);
-            const statusClass = statusClassFor(entry);
-            const priorityHtml = renderPriorityHtml(entry);
-            return (
-              '<div class="month-entry-row ' + statusClass + '" data-id="' + entry.id + '">' +
-                priorityHtml +
-                '<span class="month-entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
-                '<span class="month-entry-text">' + escapeHtml(entry.text) + "</span>" +
-              "</div>"
-            );
-          }).join("");
+          const weekday = new Date(dateStr).toLocaleDateString("ru-RU", { weekday: "short" });
+          const countLabel = formatCountLabel(entries.length);
 
           return (
             '<div class="month-day-block">' +
@@ -250,25 +264,30 @@
                 '<div class="' + badgeClass + '" data-date="' + dateStr + '">' + dayNum + "</div>" +
                 (entries.length > 1 ? '<div class="month-day-line"></div>' : "") +
               "</div>" +
-              '<div class="month-day-entries-col">' + entriesHtml + "</div>" +
+              '<div class="month-day-entries-col">' +
+                '<div class="month-day-header-row">' +
+                  '<span class="month-day-weekday">' + weekday + "</span>" +
+                  '<span class="month-day-count">· ' + countLabel + "</span>" +
+                "</div>" +
+                entries.map(renderMonthEntryRow).join("") +
+              "</div>" +
             "</div>"
           );
         }).join("");
       }
 
-      // В блок «Заметки месяца» попадают только note, явно поднятые (raised=true).
-      const ideas = monthEntries.filter(function (e) {
-        return e.type === "note" && e.raised;
-      });
+      // "Заметки месяца": undated notes without a collection.
       const ideasSection = document.getElementById("month-ideas-section");
       const ideasList = document.getElementById("month-ideas-list");
-
-      if (!ideas.length) {
+      if (!undatedNotes.length) {
         ideasSection.style.display = "none";
         ideasList.innerHTML = "";
       } else {
+        undatedNotes.sort(function (a, b) {
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        });
         ideasSection.style.display = "block";
-        ideasList.innerHTML = ideas.map(function (entry) {
+        ideasList.innerHTML = undatedNotes.map(function (entry) {
           const priorityHtml = renderPriorityHtml(entry);
           return (
             '<div class="month-idea-row" data-id="' + entry.id + '">' +
@@ -289,6 +308,34 @@
       bindMonthEvents();
     }
 
+    function renderMonthEntryRow(entry) {
+      const sym = getSymbolByEntry(entry);
+      const statusClass = statusClassFor(entry);
+      const priorityHtml = renderPriorityHtml(entry);
+      const timeHtml =
+        entry.type === "event" && entry.time
+          ? '<span class="month-entry-time">' + escapeHtml(entry.time) + "</span>"
+          : "";
+      return (
+        '<div class="month-entry-row ' + statusClass + '" data-id="' + entry.id + '">' +
+          priorityHtml +
+          '<span class="month-entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
+          timeHtml +
+          '<span class="month-entry-text">' + escapeHtml(entry.text) + "</span>" +
+        "</div>"
+      );
+    }
+
+    function formatCountLabel(n) {
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      let word;
+      if (mod10 === 1 && mod100 !== 11) word = "запись";
+      else if ([2, 3, 4].indexOf(mod10) !== -1 && [12, 13, 14].indexOf(mod100) === -1) word = "записи";
+      else word = "записей";
+      return n + " " + word;
+    }
+
     async function renderMigrationBanner() {
       const host = document.getElementById("month-entries-list");
       if (!host) return;
@@ -306,20 +353,10 @@
       const allEntries = await dbGetAll("entries");
 
       const unclosedTasks = allEntries.filter(function (e) {
-        return (
-          e.date &&
-          e.date.startsWith(prevStr) &&
-          e.type === "task" &&
-          e.status === "open"
-        );
+        return e.month === prevStr && e.type === "task" && e.status === "open";
       });
       const looseIdeas = allEntries.filter(function (e) {
-        return (
-          e.date &&
-          e.date.startsWith(prevStr) &&
-          e.type === "note" &&
-          !e.collectionId
-        );
+        return e.month === prevStr && e.type === "note" && !e.collectionId;
       });
 
       if (unclosedTasks.length === 0 && looseIdeas.length === 0) return;
@@ -361,19 +398,29 @@
         if (row) {
           const entry = await dbGet("entries", row.dataset.id);
           if (!entry) return;
-          state.currentDate = entry.date;
-          switchToScreen("today");
-          await renderTodayScreen();
+          // Click on a card opens edit modal in place — we don't teleport to Today.
           openModal(entry.date, entry, null);
           return;
         }
         const badge = event.target.closest(".month-day-num-badge");
         if (badge && badge.dataset.date) {
+          // The number badge is still a convenient shortcut to jump to that day.
           state.currentDate = badge.dataset.date;
           switchToScreen("today");
           await renderTodayScreen();
         }
       };
+
+      const undatedList = document.getElementById("month-undated-list");
+      if (undatedList) {
+        undatedList.onclick = async function (event) {
+          const row = event.target.closest(".month-entry-row");
+          if (!row) return;
+          const entry = await dbGet("entries", row.dataset.id);
+          if (!entry) return;
+          openModal(entry.date, entry, null);
+        };
+      }
 
       const ideasList = document.getElementById("month-ideas-list");
       ideasList.onclick = async function (event) {
