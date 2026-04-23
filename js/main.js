@@ -2,83 +2,42 @@
       const allEntries = await dbGetAll("entries");
       if (allEntries.length > 0) return;
 
-      const nowIso = new Date().toISOString();
       const today = todayStr();
       const yesterday = addDays(today, -1);
 
+      function makeEntry(overrides, offsetMs) {
+        const ts = new Date(Date.now() + (offsetMs || 0)).toISOString();
+        const date = overrides.date || null;
+        return Object.assign(
+          {
+            id: uid(),
+            date: date,
+            month: date ? date.slice(0, 7) : null,
+            type: "task",
+            text: "",
+            status: "open",
+            priority: null,
+            raised: false,
+            collectionId: null,
+            time: null,
+            addenda: [],
+            createdAt: ts,
+            updatedAt: ts
+          },
+          overrides
+        );
+      }
+
       const demo = [
-        {
-          id: uid(),
-          date: today,
-          type: "task",
-          text: "Позвонить врачу",
-          status: "open",
-          priority: "high",
-          raised: false,
-          collectionId: null,
-          createdAt: nowIso,
-          updatedAt: nowIso
-        },
-        {
-          id: uid(),
-          date: today,
-          type: "event",
-          text: "Встреча с командой",
-          status: "open",
-          priority: null,
-          raised: false,
-          collectionId: null,
-          createdAt: new Date(Date.now() + 1000).toISOString(),
-          updatedAt: new Date(Date.now() + 1000).toISOString()
-        },
-        {
-          id: uid(),
-          date: today,
-          type: "note",
-          text: "Заметка про рабочее место",
-          status: "open",
-          priority: "insight",
-          raised: false,
-          collectionId: null,
-          createdAt: new Date(Date.now() + 2000).toISOString(),
-          updatedAt: new Date(Date.now() + 2000).toISOString()
-        },
-        {
-          id: uid(),
-          date: yesterday,
-          type: "task",
-          text: "Отправить отчет",
-          status: "open",
-          priority: null,
-          raised: false,
-          collectionId: null,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          updatedAt: new Date(Date.now() - 86400000).toISOString()
-        },
-        {
-          id: uid(),
-          date: today,
-          type: "event",
-          text: "День рождения мамы",
-          status: "open",
-          priority: null,
-          raised: true,
-          collectionId: null,
-          createdAt: new Date(Date.now() + 3000).toISOString(),
-          updatedAt: new Date(Date.now() + 3000).toISOString()
-        },
-        {
-          id: uid(),
-          date: addDays(today, 90),
-          type: "task",
-          text: "Пройти курс английского",
-          status: "future",
-          priority: null,
-          raised: false,
-          collectionId: null,
-          createdAt: new Date(Date.now() + 4000).toISOString(),
-          updatedAt: new Date(Date.now() + 4000).toISOString()
-        }
+        makeEntry({ date: today, type: "task", text: "Позвонить врачу", priority: "high" }, 0),
+        makeEntry({ date: today, type: "event", text: "Встреча с командой" }, 1000),
+        makeEntry({ date: today, type: "note", text: "Заметка про рабочее место", priority: "insight" }, 2000),
+        makeEntry({ date: yesterday, type: "task", text: "Отправить отчет" }, -86400000),
+        makeEntry({ date: today, type: "event", text: "День рождения мамы", raised: true }, 3000),
+        makeEntry(
+          { date: addDays(today, 90), type: "task", text: "Пройти курс английского", status: "future" },
+          4000
+        )
       ];
 
       for (const item of demo) {
@@ -90,6 +49,7 @@
       const entries = await dbGetAll("entries");
       for (const entry of entries) {
         let changed = false;
+
         if (entry.priority === undefined) {
           entry.priority = null;
           changed = true;
@@ -98,6 +58,26 @@
           entry.raised = false;
           changed = true;
         }
+
+        // V4: derive `month` from `date`, fill in time/addenda defaults,
+        // rename legacy status `irrelevant` to `forgotten`.
+        if (entry.month === undefined) {
+          entry.month = entry.date ? entry.date.slice(0, 7) : null;
+          changed = true;
+        }
+        if (entry.type === "event" && entry.time === undefined) {
+          entry.time = null;
+          changed = true;
+        }
+        if (entry.addenda === undefined) {
+          entry.addenda = [];
+          changed = true;
+        }
+        if (entry.status === "irrelevant") {
+          entry.status = "forgotten";
+          changed = true;
+        }
+
         if (changed) {
           await dbPut("entries", entry);
         }

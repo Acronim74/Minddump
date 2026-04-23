@@ -637,6 +637,12 @@
           if (!existingEntry) {
             if (entry.priority === undefined) entry.priority = null;
             if (entry.raised === undefined) entry.raised = false;
+            if (entry.month === undefined) {
+              entry.month = entry.date ? entry.date.slice(0, 7) : null;
+            }
+            if (entry.type === "event" && entry.time === undefined) entry.time = null;
+            if (entry.addenda === undefined) entry.addenda = [];
+            if (entry.status === "irrelevant") entry.status = "forgotten";
             await dbAdd("entries", entry);
           }
         }

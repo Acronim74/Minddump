@@ -94,6 +94,7 @@
             existing.text = text;
             existing.type = type;
             existing.date = date;
+            existing.month = date ? date.slice(0, 7) : existing.month;
             existing.priority = priority;
             existing.updatedAt = now;
             await dbPut("entries", existing);
@@ -106,12 +107,15 @@
           await dbAdd("entries", {
             id: uid(),
             date: date,
+            month: date ? date.slice(0, 7) : null,
             type: type,
             text: text,
             status: initialStatus,
             priority: priority,
             raised: initialRaised,
             collectionId: collectionId,
+            time: null,
+            addenda: [],
             createdAt: now,
             updatedAt: now
           });

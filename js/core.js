@@ -1,5 +1,5 @@
 ﻿const DB_NAME = "minddump-db";
-    const DB_VERSION = 3;
+    const DB_VERSION = 4;
     let db = null;
 
     const nowDate = new Date();
@@ -77,8 +77,9 @@
       db = await new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onupgradeneeded = function () {
+        request.onupgradeneeded = function (event) {
           const database = request.result;
+          const oldVersion = event.oldVersion || 0;
 
           if (!database.objectStoreNames.contains("entries")) {
             const entriesStore = database.createObjectStore("entries", { keyPath: "id" });
@@ -89,6 +90,18 @@
 
           if (!database.objectStoreNames.contains("collections")) {
             database.createObjectStore("collections", { keyPath: "id" });
+          }
+
+          // V4: month and type indices for fast horizon/type filtering.
+          if (oldVersion < 4) {
+            const tx = request.transaction;
+            const entriesStore = tx.objectStore("entries");
+            if (!entriesStore.indexNames.contains("month")) {
+              entriesStore.createIndex("month", "month", { unique: false });
+            }
+            if (!entriesStore.indexNames.contains("type")) {
+              entriesStore.createIndex("type", "type", { unique: false });
+            }
           }
         };
 
