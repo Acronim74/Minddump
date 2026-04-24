@@ -21,12 +21,16 @@
         const sym = getSymbolByEntry(entry);
         const statusClass = statusClassFor(entry);
         const priorityHtml = renderPriorityHtml(entry);
+        // Only tasks have a "done" state (SPEC §2).
+        const doneBtn = entry.type === "task"
+          ? '<button type="button" class="entry-action js-toggle-done">✓</button>'
+          : "";
         return (
           '<div class="entry-item ' + statusClass + '" data-id="' + entry.id + '">' +
             priorityHtml +
             '<span class="entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
             '<span class="entry-text">' + escapeHtml(entry.text) + "</span>" +
-            '<button type="button" class="entry-action js-toggle-done">✓</button>' +
+            doneBtn +
             '<button type="button" class="entry-action js-entry-menu">···</button>' +
           "</div>"
         );
