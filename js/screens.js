@@ -1151,6 +1151,11 @@
           await dbDelete("collections", collection.id);
         }
 
+        // Mark the demo as "already handled" so the next launch does NOT
+        // re-seed an empty database with demo entries.
+        state.demoSeeded = true;
+        saveSettings();
+
         await renderTodayScreen();
         alert("Данные удалены");
       });

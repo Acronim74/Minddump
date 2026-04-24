@@ -25,7 +25,11 @@
       // overwritten by `loadSettings()` if a saved value exists.
       notesOverflowThreshold: 50,
       showWeekScreen: false,
-      weekStartsOn: 1
+      weekStartsOn: 1,
+      // Internal flag — true once demo data has been seeded, OR once the
+      // user has explicitly cleared all data. Prevents the seeder from
+      // re-populating an empty database after the user wipes it.
+      demoSeeded: false
     };
     let activeMenuEntryId = null;
 
@@ -46,6 +50,9 @@
         if (saved.weekStartsOn === 0 || saved.weekStartsOn === 1) {
           state.weekStartsOn = saved.weekStartsOn;
         }
+        if (typeof saved.demoSeeded === "boolean") {
+          state.demoSeeded = saved.demoSeeded;
+        }
       } catch (err) {
         console.warn("Не удалось загрузить настройки:", err);
       }
@@ -56,7 +63,8 @@
         localStorage.setItem(SETTINGS_KEY, JSON.stringify({
           notesOverflowThreshold: state.notesOverflowThreshold,
           showWeekScreen: state.showWeekScreen,
-          weekStartsOn: state.weekStartsOn
+          weekStartsOn: state.weekStartsOn,
+          demoSeeded: state.demoSeeded
         }));
       } catch (err) {
         console.warn("Не удалось сохранить настройки:", err);

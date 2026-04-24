@@ -1,6 +1,15 @@
 ﻿    async function seedDemoDataIfNeeded() {
+      // Persistent guard: once demo has been seeded OR the user has wiped
+      // their data via Settings → "Очистить", we never re-seed. Without
+      // this, an empty database after a manual clear would silently get
+      // the demo records back on next launch.
+      if (state.demoSeeded) return;
       const allEntries = await dbGetAll("entries");
-      if (allEntries.length > 0) return;
+      if (allEntries.length > 0) {
+        state.demoSeeded = true;
+        saveSettings();
+        return;
+      }
 
       const today = todayStr();
       const yesterday = addDays(today, -1);
@@ -43,6 +52,8 @@
       for (const item of demo) {
         await dbAdd("entries", item);
       }
+      state.demoSeeded = true;
+      saveSettings();
     }
 
     async function migrateSchemaIfNeeded() {
