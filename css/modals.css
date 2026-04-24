@@ -249,6 +249,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 12px;
       padding: 10px 12px;
       background: var(--surface-2);
@@ -258,7 +259,8 @@
     }
 
     .migration-item-text {
-      flex: 1;
+      flex: 1 1 auto;
+      min-width: 0;
       font-size: 14px;
       color: var(--text);
       word-break: break-word;
@@ -268,19 +270,22 @@
       display: flex;
       gap: 6px;
       flex-shrink: 0;
+      flex-wrap: wrap;
     }
 
     .migration-btn {
-      width: 34px;
+      min-width: 36px;
       height: 34px;
+      padding: 0 8px;
       border-radius: 9px;
       border: 1px solid var(--border);
       background: var(--surface);
       color: var(--text);
       font: inherit;
-      font-size: 16px;
+      font-size: 14px;
       cursor: pointer;
       line-height: 1;
+      white-space: nowrap;
     }
 
     .migration-btn:hover {
@@ -295,5 +300,86 @@
     .migration-btn.danger:hover {
       background: rgba(245, 94, 122, 0.1);
       border-color: var(--danger);
+    }
+
+    /* Inline picker that slides in below an item when a picker-driven action is clicked. */
+    .migration-item-picker {
+      flex-basis: 100%;
+      margin-top: 4px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .migration-item-picker[hidden] {
+      display: none;
+    }
+
+    .migration-picker-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .migration-picker-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .migration-picker-input {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+    }
+
+    .migration-picker-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .migration-picker-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .migration-picker-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .migration-picker-cancel,
+    .migration-picker-apply {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .migration-picker-apply {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .migration-picker-cancel:hover {
+      border-color: var(--text-muted);
+    }
+
+    .migration-picker-apply:hover {
+      background: rgba(94, 245, 192, 0.1);
     }
 

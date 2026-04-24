@@ -587,10 +587,70 @@
       });
     }
 
-    // `targetMonthStr` is the YYYY-MM of the month under review. It will be
-    // consumed in Phase 4b by the day/month pickers so that, e.g., "В Полгода"
-    // shows months relative to the source, and "В следующий месяц" knows which
-    // month to skip to.
+    // SPEC §5 actions on a task in the migration ritual:
+    //   done        - пометить выполненной (если вдруг вспомнили)
+    //   next-month  - перенести в следующий месяц (выбор дня или «без даты»)
+    //   to-future   - отложить в Полгода (выбор месяца из 6-месячного горизонта)
+    //   to-event    - превратить в событие (выбор даты + опц. времени)
+    //   to-note     - превратить в заметку (в блок месяца или в коллекцию)
+    //   forget      - забыть (soft-delete)
+    const TASK_MIGRATION_BUTTONS = [
+      { action: "done",        label: "✓", title: "Выполнено" },
+      { action: "next-month",  label: "›", title: "В следующий месяц" },
+      { action: "to-future",   label: "‹", title: "В Полгода" },
+      { action: "to-event",    label: "⇄○", title: "В событие" },
+      { action: "to-note",     label: "⇄—", title: "В заметку" },
+      { action: "forget",      label: "~",  title: "Забыть", danger: true }
+    ];
+
+    // SPEC §5 actions on a note in the migration ritual:
+    //   to-task   - превратить в задачу (выбор дня)
+    //   to-event  - превратить в событие (дата + опц. время)
+    //   to-coll   - переложить в коллекцию (использует уже существующий выбор)
+    //   forget    - забыть
+    const NOTE_MIGRATION_BUTTONS = [
+      { action: "to-task",   label: "⇄·",  title: "В задачу" },
+      { action: "to-event",  label: "⇄○",  title: "В событие" },
+      { action: "to-coll",   label: "→",   title: "В коллекцию" },
+      { action: "forget",    label: "~",   title: "Забыть", danger: true }
+    ];
+
+    function renderMigrationItem(entry, buttons, symbol) {
+      const actionsHtml = buttons
+        .map(function (b) {
+          return (
+            '<button class="migration-btn' +
+            (b.danger ? " danger" : "") +
+            '" data-action="' +
+            b.action +
+            '" data-id="' +
+            entry.id +
+            '" type="button" title="' +
+            b.title +
+            '">' +
+            b.label +
+            "</button>"
+          );
+        })
+        .join("");
+
+      return (
+        '<div class="migration-item" data-id="' +
+        entry.id +
+        '">' +
+        '<div class="migration-item-text">' +
+        symbol +
+        " " +
+        escapeHtml(entry.text) +
+        "</div>" +
+        '<div class="migration-item-actions">' +
+        actionsHtml +
+        "</div>" +
+        '<div class="migration-item-picker" hidden></div>' +
+        "</div>"
+      );
+    }
+
     function openMigrationModal(tasks, ideas, targetMonthStr) {
       const overlay = document.getElementById("migration-overlay");
       overlay.dataset.targetMonth = targetMonthStr || "";
@@ -604,26 +664,7 @@
         tasksSection.style.display = "block";
         tasksList.innerHTML = tasks
           .map(function (entry) {
-            return (
-              '<div class="migration-item" data-id="' +
-              entry.id +
-              '">' +
-                '<div class="migration-item-text">· ' +
-                escapeHtml(entry.text) +
-                "</div>" +
-                '<div class="migration-item-actions">' +
-                  '<button class="migration-btn" data-action="migrate-next" data-id="' +
-                  entry.id +
-                  '" type="button" title="Перенести на следующий месяц">›</button>' +
-                  '<button class="migration-btn" data-action="to-future" data-id="' +
-                  entry.id +
-                  '" type="button" title="Отложить в Полгода">‹</button>' +
-                  '<button class="migration-btn danger" data-action="irrelevant" data-id="' +
-                  entry.id +
-                  '" type="button" title="Неактуально">~</button>' +
-                "</div>" +
-              "</div>"
-            );
+            return renderMigrationItem(entry, TASK_MIGRATION_BUTTONS, "·");
           })
           .join("");
       }
@@ -637,26 +678,7 @@
         ideasSection.style.display = "block";
         ideasList.innerHTML = ideas
           .map(function (entry) {
-            return (
-              '<div class="migration-item" data-id="' +
-              entry.id +
-              '">' +
-                '<div class="migration-item-text">— ' +
-                escapeHtml(entry.text) +
-                "</div>" +
-                '<div class="migration-item-actions">' +
-                  '<button class="migration-btn" data-action="idea-to-coll" data-id="' +
-                  entry.id +
-                  '" type="button" title="В коллекцию">→</button>' +
-                  '<button class="migration-btn" data-action="idea-to-task" data-id="' +
-                  entry.id +
-                  '" type="button" title="В задачу">↻</button>' +
-                  '<button class="migration-btn danger" data-action="idea-forget" data-id="' +
-                  entry.id +
-                  '" type="button" title="Забыть">×</button>' +
-                "</div>" +
-              "</div>"
-            );
+            return renderMigrationItem(entry, NOTE_MIGRATION_BUTTONS, "—");
           })
           .join("");
       }
@@ -664,8 +686,255 @@
       overlay.style.display = "flex";
     }
 
+    // ===== Picker builders =====
+
+    function addMonthsToMonthStr(monthStr, delta) {
+      const parts = monthStr.split("-");
+      let y = parseInt(parts[0], 10);
+      let m = parseInt(parts[1], 10) + delta;
+      while (m > 12) { m -= 12; y++; }
+      while (m < 1)  { m += 12; y--; }
+      return y + "-" + String(m).padStart(2, "0");
+    }
+
+    function lastDayOfMonth(monthStr) {
+      const y = parseInt(monthStr.slice(0, 4), 10);
+      const m = parseInt(monthStr.slice(5, 7), 10);
+      return new Date(y, m, 0).getDate();
+    }
+
+    function humanMonth(monthStr) {
+      const y = parseInt(monthStr.slice(0, 4), 10);
+      const m = parseInt(monthStr.slice(5, 7), 10) - 1;
+      return new Date(y, m, 1).toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    }
+
+    // All pickers share a wrapper with Применить/Отмена buttons.
+    function wrapPicker(innerHtml) {
+      return (
+        '<div class="migration-picker-form">' +
+        innerHtml +
+        '<div class="migration-picker-actions">' +
+        '<button class="migration-picker-cancel" data-picker-action="cancel" type="button">Отмена</button>' +
+        '<button class="migration-picker-apply" data-picker-action="apply" type="button">Применить</button>' +
+        "</div>" +
+        "</div>"
+      );
+    }
+
+    // Day picker within a given month. Optional "без даты" toggle for tasks.
+    function buildDayPicker(monthStr, opts) {
+      opts = opts || {};
+      const first = monthStr + "-01";
+      const last = monthStr + "-" + String(lastDayOfMonth(monthStr)).padStart(2, "0");
+      const defaultDate = opts.defaultDate || first;
+      const allowUndated = opts.allowUndated !== false;
+      const label = opts.label || ("День в " + humanMonth(monthStr));
+
+      return wrapPicker(
+        '<label class="migration-picker-label">' + label + "</label>" +
+        '<input class="migration-picker-input" type="date" data-field="date" value="' +
+        defaultDate + '" min="' + first + '" max="' + last + '">' +
+        (allowUndated
+          ? '<label class="migration-picker-check">' +
+            '<input type="checkbox" data-field="undated"> без даты' +
+            "</label>"
+          : "")
+      );
+    }
+
+    // Month-in-6-months picker for "В Полгода". Range: source+1 .. source+6.
+    function buildMonthPicker(sourceMonthStr) {
+      const options = [];
+      for (let i = 1; i <= 6; i++) {
+        const ms = addMonthsToMonthStr(sourceMonthStr, i);
+        options.push(
+          '<option value="' + ms + '">' + humanMonth(ms) + "</option>"
+        );
+      }
+      return wrapPicker(
+        '<label class="migration-picker-label">Месяц</label>' +
+        '<select class="migration-picker-input" data-field="month">' +
+        options.join("") +
+        "</select>"
+      );
+    }
+
+    // Date + optional time picker — for "В событие".
+    function buildEventPicker(defaultDate) {
+      return wrapPicker(
+        '<label class="migration-picker-label">Дата</label>' +
+        '<input class="migration-picker-input" type="date" data-field="date" value="' +
+        (defaultDate || todayStr()) + '">' +
+        '<label class="migration-picker-label">Время (необязательно)</label>' +
+        '<input class="migration-picker-input" type="time" data-field="time">'
+      );
+    }
+
+    // "В заметку" sub-choice: leave in month block or drop into a collection.
+    async function buildNoteTargetPicker() {
+      const collections = await dbGetAll("collections");
+      const collOptions = collections
+        .map(function (c) {
+          return '<option value="' + c.id + '">' + escapeHtml(c.name) + "</option>";
+        })
+        .join("");
+      const select = collections.length
+        ? '<select class="migration-picker-input" data-field="coll" disabled>' +
+          collOptions + "</select>"
+        : '<div class="migration-picker-hint">Коллекций пока нет — будет в блоке месяца.</div>';
+      return wrapPicker(
+        '<label class="migration-picker-check">' +
+        '<input type="radio" name="note-target" value="month" data-field="note-target" checked>' +
+        " В блоке «Заметки месяца»</label>" +
+        (collections.length
+          ? '<label class="migration-picker-check">' +
+            '<input type="radio" name="note-target" value="coll" data-field="note-target">' +
+            " В коллекцию</label>" +
+            select
+          : select)
+      );
+    }
+
     function closeMigrationModal() {
       document.getElementById("migration-overlay").style.display = "none";
+    }
+
+    function collapseMigrationItemPicker(item) {
+      if (!item) return;
+      const picker = item.querySelector(".migration-item-picker");
+      if (!picker) return;
+      picker.hidden = true;
+      picker.innerHTML = "";
+      delete item.dataset.pendingAction;
+    }
+
+    async function expandMigrationItemPicker(item, action, entry, targetMonthStr) {
+      const picker = item.querySelector(".migration-item-picker");
+      if (!picker) return;
+      item.dataset.pendingAction = action;
+
+      const sourceMonth =
+        entry.month ||
+        (entry.date ? entry.date.slice(0, 7) : targetMonthStr || monthStrFromYM(state.currentYear, state.currentMonth));
+
+      let html = "";
+      if (entry.type === "task" && action === "next-month") {
+        const nextMonth = addMonthsToMonthStr(sourceMonth, 1);
+        html = buildDayPicker(nextMonth, { allowUndated: true, defaultDate: nextMonth + "-01" });
+      } else if (entry.type === "task" && action === "to-future") {
+        html = buildMonthPicker(sourceMonth);
+      } else if (action === "to-event") {
+        html = buildEventPicker(entry.date || todayStr());
+      } else if (entry.type === "task" && action === "to-note") {
+        html = await buildNoteTargetPicker();
+      } else if (entry.type === "note" && action === "to-task") {
+        html = buildDayPicker(sourceMonth, { allowUndated: true, defaultDate: entry.date || (sourceMonth + "-01") });
+      } else {
+        return;
+      }
+
+      picker.innerHTML = html;
+      picker.hidden = false;
+
+      // Enable/disable coll select when note-target radio flips.
+      if (entry.type === "task" && action === "to-note") {
+        const radios = picker.querySelectorAll('input[name="note-target"]');
+        const collSelect = picker.querySelector('[data-field="coll"]');
+        radios.forEach(function (r) {
+          r.addEventListener("change", function () {
+            if (collSelect) collSelect.disabled = r.value !== "coll" || !r.checked;
+          });
+        });
+      }
+    }
+
+    // Returns null if apply should be aborted (invalid input etc.).
+    async function applyMigrationAction(entry, action, pickerEl, targetMonthStr) {
+      const now = new Date().toISOString();
+
+      if (entry.type === "task") {
+        if (action === "done") {
+          entry.status = "done";
+        } else if (action === "next-month") {
+          const undated = pickerEl && pickerEl.querySelector('[data-field="undated"]');
+          const dateInput = pickerEl && pickerEl.querySelector('[data-field="date"]');
+          if (undated && undated.checked) {
+            const source = entry.month || monthStrFromYM(state.currentYear, state.currentMonth);
+            entry.month = addMonthsToMonthStr(source, 1);
+            entry.date = null;
+          } else if (dateInput && dateInput.value) {
+            entry.date = dateInput.value;
+            entry.month = dateInput.value.slice(0, 7);
+          } else {
+            return false;
+          }
+          entry.status = "open";
+        } else if (action === "to-future") {
+          const sel = pickerEl && pickerEl.querySelector('[data-field="month"]');
+          if (!sel || !sel.value) return false;
+          entry.month = sel.value;
+          entry.date = null;
+          entry.status = "open";
+        } else if (action === "to-event") {
+          const dateInput = pickerEl && pickerEl.querySelector('[data-field="date"]');
+          const timeInput = pickerEl && pickerEl.querySelector('[data-field="time"]');
+          if (!dateInput || !dateInput.value) return false;
+          entry.type = "event";
+          entry.date = dateInput.value;
+          entry.month = dateInput.value.slice(0, 7);
+          entry.time = timeInput && timeInput.value ? timeInput.value : null;
+          entry.status = "upcoming";
+        } else if (action === "to-note") {
+          const target = pickerEl && pickerEl.querySelector('input[name="note-target"]:checked');
+          const collSel = pickerEl && pickerEl.querySelector('[data-field="coll"]');
+          entry.type = "note";
+          entry.status = "active";
+          if (target && target.value === "coll" && collSel && collSel.value) {
+            entry.collectionId = collSel.value;
+          } else {
+            entry.collectionId = null;
+          }
+        } else if (action === "forget") {
+          entry.status = "forgotten";
+        } else {
+          return false;
+        }
+      } else if (entry.type === "note") {
+        if (action === "to-task") {
+          const undated = pickerEl && pickerEl.querySelector('[data-field="undated"]');
+          const dateInput = pickerEl && pickerEl.querySelector('[data-field="date"]');
+          entry.type = "task";
+          entry.status = "open";
+          if (undated && undated.checked) {
+            entry.date = null;
+          } else if (dateInput && dateInput.value) {
+            entry.date = dateInput.value;
+            entry.month = dateInput.value.slice(0, 7);
+          } else {
+            return false;
+          }
+        } else if (action === "to-event") {
+          const dateInput = pickerEl && pickerEl.querySelector('[data-field="date"]');
+          const timeInput = pickerEl && pickerEl.querySelector('[data-field="time"]');
+          if (!dateInput || !dateInput.value) return false;
+          entry.type = "event";
+          entry.date = dateInput.value;
+          entry.month = dateInput.value.slice(0, 7);
+          entry.time = timeInput && timeInput.value ? timeInput.value : null;
+          entry.status = "upcoming";
+        } else if (action === "forget") {
+          entry.status = "forgotten";
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+
+      entry.updatedAt = now;
+      await dbPut("entries", entry);
+      return true;
     }
 
     function bindMigrationEvents() {
@@ -679,103 +948,70 @@
         await renderMonthScreen();
       });
 
-      const tasksList = document.getElementById("migration-tasks-list");
-      tasksList.addEventListener("click", async function (event) {
-        const btn = event.target.closest("[data-action]");
-        if (!btn) return;
-        const id = btn.dataset.id;
-        const entry = await dbGet("entries", id);
-        if (!entry) return;
-        const now = new Date().toISOString();
+      // Generic migration list click handler — reused for tasks and notes lists.
+      async function handleMigrationClick(event) {
+        const overlay = document.getElementById("migration-overlay");
+        const targetMonthStr = overlay.dataset.targetMonth || "";
 
-        if (btn.dataset.action === "migrate-next") {
-          // SPEC §5: "В следующий месяц" по умолчанию кладёт задачу в блок
-          // «Без даты» следующего месяца. Выбор конкретного дня будет добавлен
-          // в следующем под-коммите Phase 4b.
-          const sourceMonth = entry.month || (entry.date ? entry.date.slice(0, 7) : null);
-          let y, m;
-          if (sourceMonth) {
-            y = parseInt(sourceMonth.slice(0, 4), 10);
-            m = parseInt(sourceMonth.slice(5, 7), 10);
-          } else {
-            const nowD = new Date();
-            y = nowD.getFullYear();
-            m = nowD.getMonth() + 1;
+        // Picker Apply/Cancel inside an already-open picker.
+        const pickerBtn = event.target.closest("[data-picker-action]");
+        if (pickerBtn) {
+          const item = pickerBtn.closest(".migration-item");
+          if (!item) return;
+          const action = item.dataset.pendingAction;
+          const id = item.dataset.id;
+          if (pickerBtn.dataset.pickerAction === "cancel") {
+            collapseMigrationItemPicker(item);
+            return;
           }
-          m++;
-          if (m > 12) {
-            m = 1;
-            y++;
-          }
-          entry.month = y + "-" + String(m).padStart(2, "0");
-          entry.date = null;
-          entry.status = "open";
-        } else if (btn.dataset.action === "to-future") {
-          // SPEC §5: "В Полгода" = запись уходит вперёд как задача без конкретной даты.
-          // Для базового поведения кладём на +3 месяца вперёд. Выбор конкретного
-          // месяца в рамках 6-месячного горизонта — в Phase 4b.
-          const sourceMonth = entry.month || (entry.date ? entry.date.slice(0, 7) : null);
-          let y, m;
-          if (sourceMonth) {
-            y = parseInt(sourceMonth.slice(0, 4), 10);
-            m = parseInt(sourceMonth.slice(5, 7), 10);
-          } else {
-            const nowD = new Date();
-            y = nowD.getFullYear();
-            m = nowD.getMonth() + 1;
-          }
-          m += 3;
-          while (m > 12) {
-            m -= 12;
-            y++;
-          }
-          entry.month = y + "-" + String(m).padStart(2, "0");
-          entry.date = null;
-          entry.status = "open";
-        } else if (btn.dataset.action === "irrelevant") {
-          entry.status = "forgotten";
+          // apply
+          const entry = await dbGet("entries", id);
+          if (!entry) return;
+          const pickerEl = item.querySelector(".migration-item-picker");
+          const ok = await applyMigrationAction(entry, action, pickerEl, targetMonthStr);
+          if (!ok) return;
+          item.remove();
+          return;
         }
 
-        entry.updatedAt = now;
-        await dbPut("entries", entry);
-
-        const item = btn.closest(".migration-item");
-        if (item) item.remove();
-      });
-
-      const ideasList = document.getElementById("migration-ideas-list");
-      ideasList.addEventListener("click", async function (event) {
+        // Row action button.
         const btn = event.target.closest("[data-action]");
         if (!btn) return;
+        const item = btn.closest(".migration-item");
+        if (!item) return;
+        const action = btn.dataset.action;
         const id = btn.dataset.id;
         const entry = await dbGet("entries", id);
         if (!entry) return;
-        const now = new Date().toISOString();
 
-        if (btn.dataset.action === "idea-to-coll") {
+        // Simple immediate actions (no picker needed).
+        if (action === "done" || action === "forget") {
+          const ok = await applyMigrationAction(entry, action, null, targetMonthStr);
+          if (ok) item.remove();
+          return;
+        }
+
+        // "В коллекцию" for notes — reuses the dedicated assign-collection modal.
+        if (entry.type === "note" && action === "to-coll") {
           closeMigrationModal();
           await openAssignCollModal(id);
           return;
         }
 
-        if (btn.dataset.action === "idea-to-task") {
-          entry.type = "task";
-          entry.status = "open";
-          entry.updatedAt = now;
-          await dbPut("entries", entry);
+        // Picker-driven actions: toggle the inline picker under the row.
+        if (item.dataset.pendingAction === action) {
+          collapseMigrationItemPicker(item);
+        } else {
+          await expandMigrationItemPicker(item, action, entry, targetMonthStr);
         }
+      }
 
-        if (btn.dataset.action === "idea-forget") {
-          // SPEC §9: "Забыть" — это soft-статус, не hard delete. Запись остаётся
-          // в БД перечёркнутой и не мешает активным спискам.
-          entry.status = "forgotten";
-          entry.updatedAt = now;
-          await dbPut("entries", entry);
-        }
-
-        const item = btn.closest(".migration-item");
-        if (item) item.remove();
-      });
+      document
+        .getElementById("migration-tasks-list")
+        .addEventListener("click", handleMigrationClick);
+      document
+        .getElementById("migration-ideas-list")
+        .addEventListener("click", handleMigrationClick);
     }
 
     function bindSettingsEvents() {
