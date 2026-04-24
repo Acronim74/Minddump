@@ -119,6 +119,7 @@
                 '<span class="future-entry-text">' +
                 escapeHtml(entry.text) +
                 "</span>" +
+                renderAddendaBadge(entry) +
                 (dateHint ? '<span class="future-entry-date">' + dateHint + "</span>" : "") +
                 '<button class="future-entry-del" data-action="delete-future" data-id="' +
                 entry.id +

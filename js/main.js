@@ -116,6 +116,7 @@
       bindModalEvents();
       bindEntryMenuEvents();
       bindEntryPickerEvents();
+      bindAddendaEvents();
       bindMonthNavEvents();
       bindFutureNavEvents();
       bindCollModalEvents();

@@ -30,6 +30,7 @@
             priorityHtml +
             '<span class="entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
             '<span class="entry-text">' + escapeHtml(entry.text) + "</span>" +
+            renderAddendaBadge(entry) +
             doneBtn +
             '<button type="button" class="entry-action js-entry-menu">···</button>' +
           "</div>"
@@ -335,6 +336,7 @@
           '<span class="month-entry-symbol" style="color:' + sym.color + '">' + sym.char + "</span>" +
           timeHtml +
           '<span class="month-entry-text">' + escapeHtml(entry.text) + "</span>" +
+          renderAddendaBadge(entry) +
         "</div>"
       );
     }
@@ -492,6 +494,9 @@
     function bindMonthEvents() {
       const listEl = document.getElementById("month-entries-list");
       listEl.onclick = async function (event) {
+        // Addenda badge is handled by the global delegation handler —
+        // do not also open the edit modal when the user clicked it.
+        if (event.target.closest(".js-addenda-open")) return;
         const row = event.target.closest(".month-entry-row");
         if (row) {
           const entry = await dbGet("entries", row.dataset.id);
@@ -512,6 +517,7 @@
       const undatedList = document.getElementById("month-undated-list");
       if (undatedList) {
         undatedList.onclick = async function (event) {
+          if (event.target.closest(".js-addenda-open")) return;
           const row = event.target.closest(".month-entry-row");
           if (!row) return;
           const entry = await dbGet("entries", row.dataset.id);

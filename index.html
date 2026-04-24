@@ -219,6 +219,10 @@
         <span class="menu-icon" style="color:var(--accent)">⇄</span>
         Изменить тип
       </div>
+      <div class="menu-item" id="menu-addendum">
+        <span class="menu-icon" style="color:var(--accent)">+</span>
+        Дополнить
+      </div>
       <div class="menu-item" id="menu-assign-coll" style="display:none">
         <span class="menu-icon" style="color:var(--accent)">❑</span>
         В коллекцию
@@ -255,6 +259,25 @@
         <button class="modal-close" id="entry-picker-close" type="button">✕</button>
       </div>
       <div id="entry-picker-body"></div>
+    </div>
+  </div>
+
+  <div id="addenda-overlay" class="modal-overlay" style="display:none">
+    <div class="modal-sheet addenda-sheet">
+      <div class="modal-header">
+        <span class="modal-title">Дополнения</span>
+        <button class="modal-close" id="addenda-close" type="button">✕</button>
+      </div>
+      <div id="addenda-entry-header" class="addenda-entry-header"></div>
+      <div id="addenda-list" class="addenda-list"></div>
+      <div class="addenda-input-row">
+        <textarea id="addenda-input" maxlength="280"
+          placeholder="Добавьте уточнение (до 280 символов)"></textarea>
+        <div class="addenda-input-footer">
+          <span class="addenda-counter"><span id="addenda-counter">0</span>/280</span>
+          <button class="modal-btn-save" id="addenda-add-btn" type="button">Добавить</button>
+        </div>
+      </div>
     </div>
   </div>
 

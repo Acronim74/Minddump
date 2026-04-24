@@ -209,6 +209,13 @@
         openEntryPicker("change-type", entry);
       });
 
+      document.getElementById("menu-addendum").addEventListener("click", async function () {
+        if (!activeMenuEntryId) return;
+        const entryId = activeMenuEntryId;
+        closeEntryMenu();
+        await openAddendaModal(entryId);
+      });
+
       document.getElementById("menu-assign-coll").addEventListener("click", async function () {
         if (!activeMenuEntryId) return;
         const entryId = activeMenuEntryId;
@@ -515,5 +522,189 @@
             collSel.disabled = event.target.value !== "coll";
           }
         }
+      });
+    }
+
+    // ===== Addenda overlay (SPEC §7) =====
+    // Short dated additions to any entry, up to 280 chars each.
+    // Addendum shape: { id, text, createdAt, updatedAt? }.
+
+    const ADDENDUM_MAX_LEN = 280;
+    let activeAddendaEntryId = null;
+    let editingAddendumId = null;
+
+    async function openAddendaModal(entryId) {
+      const entry = await dbGet("entries", entryId);
+      if (!entry) return;
+      activeAddendaEntryId = entryId;
+      editingAddendumId = null;
+      renderAddendaHeader(entry);
+      renderAddendaList(entry);
+      const input = document.getElementById("addenda-input");
+      input.value = "";
+      input.disabled = false;
+      document.getElementById("addenda-counter").textContent = "0";
+      document.getElementById("addenda-add-btn").textContent = "Добавить";
+      document.getElementById("addenda-overlay").style.display = "flex";
+      setTimeout(function () { input.focus(); }, 0);
+    }
+
+    function closeAddendaModal() {
+      activeAddendaEntryId = null;
+      editingAddendumId = null;
+      document.getElementById("addenda-overlay").style.display = "none";
+    }
+
+    function renderAddendaHeader(entry) {
+      const header = document.getElementById("addenda-entry-header");
+      const sym = getSymbolByEntry(entry);
+      header.innerHTML =
+        '<span class="addenda-entry-symbol" style="color:' + sym.color + '">' +
+        sym.char + "</span>" +
+        '<span class="addenda-entry-text">' + escapeHtml(entry.text) + "</span>";
+    }
+
+    function formatAddendumDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleString("ru-RU", {
+        day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function renderAddendaList(entry) {
+      const list = document.getElementById("addenda-list");
+      const items = Array.isArray(entry.addenda) ? entry.addenda : [];
+      if (items.length === 0) {
+        list.innerHTML = '<div class="addenda-empty">Пока нет дополнений</div>';
+        return;
+      }
+      list.innerHTML = items
+        .slice()
+        .sort(function (a, b) { return (a.createdAt || "").localeCompare(b.createdAt || ""); })
+        .map(function (a) {
+          const edited = a.updatedAt && a.updatedAt !== a.createdAt ? " • изм." : "";
+          return (
+            '<div class="addendum-item" data-addendum-id="' + a.id + '">' +
+            '<div class="addendum-meta">' +
+            '<span class="addendum-date">' + formatAddendumDate(a.createdAt) + edited + "</span>" +
+            '<div class="addendum-actions">' +
+            '<button type="button" class="addendum-btn" data-addendum-action="edit"' +
+            ' data-addendum-id="' + a.id + '" title="Редактировать">✎</button>' +
+            '<button type="button" class="addendum-btn danger" data-addendum-action="delete"' +
+            ' data-addendum-id="' + a.id + '" title="Удалить">×</button>' +
+            "</div>" +
+            "</div>" +
+            '<div class="addendum-text">' + escapeHtml(a.text) + "</div>" +
+            "</div>"
+          );
+        })
+        .join("");
+    }
+
+    async function saveAddendum() {
+      if (!activeAddendaEntryId) return;
+      const input = document.getElementById("addenda-input");
+      const text = (input.value || "").trim();
+      if (!text) return;
+      if (text.length > ADDENDUM_MAX_LEN) return;
+
+      const entry = await dbGet("entries", activeAddendaEntryId);
+      if (!entry) return;
+      if (!Array.isArray(entry.addenda)) entry.addenda = [];
+      const now = new Date().toISOString();
+
+      if (editingAddendumId) {
+        // SPEC §7: editing an existing addendum requires confirmation.
+        if (!confirm("Сохранить изменённое дополнение?")) return;
+        const idx = entry.addenda.findIndex(function (a) { return a.id === editingAddendumId; });
+        if (idx === -1) return;
+        entry.addenda[idx].text = text;
+        entry.addenda[idx].updatedAt = now;
+        editingAddendumId = null;
+        document.getElementById("addenda-add-btn").textContent = "Добавить";
+      } else {
+        entry.addenda.push({ id: uid(), text: text, createdAt: now });
+      }
+
+      entry.updatedAt = now;
+      await dbPut("entries", entry);
+
+      input.value = "";
+      document.getElementById("addenda-counter").textContent = "0";
+      renderAddendaList(entry);
+      await refreshAllScreens();
+    }
+
+    async function deleteAddendum(addendumId) {
+      if (!activeAddendaEntryId) return;
+      if (!confirm("Удалить это дополнение?")) return;
+      const entry = await dbGet("entries", activeAddendaEntryId);
+      if (!entry || !Array.isArray(entry.addenda)) return;
+      entry.addenda = entry.addenda.filter(function (a) { return a.id !== addendumId; });
+      entry.updatedAt = new Date().toISOString();
+      await dbPut("entries", entry);
+      renderAddendaList(entry);
+      await refreshAllScreens();
+    }
+
+    function startEditAddendum(addendumId) {
+      const list = document.getElementById("addenda-list");
+      const entryId = activeAddendaEntryId;
+      if (!entryId) return;
+      // Read current text from DOM (it's already escaped-rendered, so pull
+      // from source of truth — the DB).
+      dbGet("entries", entryId).then(function (entry) {
+        if (!entry || !Array.isArray(entry.addenda)) return;
+        const a = entry.addenda.find(function (x) { return x.id === addendumId; });
+        if (!a) return;
+        editingAddendumId = addendumId;
+        const input = document.getElementById("addenda-input");
+        input.value = a.text;
+        document.getElementById("addenda-counter").textContent = String(a.text.length);
+        document.getElementById("addenda-add-btn").textContent = "Сохранить";
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      });
+    }
+
+    function bindAddendaEvents() {
+      const overlay = document.getElementById("addenda-overlay");
+      overlay.addEventListener("click", function (event) {
+        if (event.target === this) closeAddendaModal();
+      });
+      document.getElementById("addenda-close").addEventListener("click", closeAddendaModal);
+
+      const input = document.getElementById("addenda-input");
+      input.addEventListener("input", function () {
+        document.getElementById("addenda-counter").textContent =
+          String((input.value || "").length);
+      });
+      input.addEventListener("keydown", function (event) {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+          event.preventDefault();
+          saveAddendum();
+        }
+      });
+
+      document.getElementById("addenda-add-btn").addEventListener("click", saveAddendum);
+
+      // Delegated: edit / delete buttons inside the list.
+      document.getElementById("addenda-list").addEventListener("click", function (event) {
+        const btn = event.target.closest("[data-addendum-action]");
+        if (!btn) return;
+        const action = btn.dataset.addendumAction;
+        const id = btn.dataset.addendumId;
+        if (action === "edit") startEditAddendum(id);
+        else if (action === "delete") deleteAddendum(id);
+      });
+
+      // Global delegation: clicking a `+N` badge anywhere in the app opens
+      // the addenda overlay for the clicked entry.
+      document.addEventListener("click", function (event) {
+        const badge = event.target.closest(".js-addenda-open");
+        if (!badge) return;
+        event.stopPropagation();
+        const id = badge.dataset.id;
+        if (id) openAddendaModal(id);
       });
     }

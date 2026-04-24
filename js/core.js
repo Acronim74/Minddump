@@ -28,6 +28,19 @@
       return crypto.randomUUID();
     }
 
+    // Addenda badge shown inline on every card that has at least one
+    // addendum. Clicking it opens the addenda overlay. Kept in core so all
+    // render paths (Today / Month / Future / Collections) share the markup.
+    function renderAddendaBadge(entry) {
+      const n = entry && entry.addenda ? entry.addenda.length : 0;
+      if (!n) return "";
+      return (
+        '<button type="button" class="addenda-badge js-addenda-open"' +
+        ' data-id="' + entry.id + '"' +
+        ' title="Дополнений: ' + n + '">+' + n + "</button>"
+      );
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replace(/&/g, "&amp;")

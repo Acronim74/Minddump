@@ -50,6 +50,7 @@
                 '<span class="coll-entry-text">' +
                 escapeHtml(entry.text) +
                 "</span>" +
+                renderAddendaBadge(entry) +
                 '<button class="coll-entry-del" data-action="delete-coll-entry" data-id="' +
                 entry.id +
                 '" type="button" title="Удалить">×</button>' +
