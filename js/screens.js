@@ -171,6 +171,7 @@
       const allNavBtns = document.querySelectorAll(".nav-btn, .sidebar-btn");
       const screens = {
         today: document.getElementById("screen-today"),
+        week: document.getElementById("screen-week"),
         month: document.getElementById("screen-month"),
         future: document.getElementById("screen-future"),
         collections: document.getElementById("screen-collections"),
@@ -584,6 +585,9 @@
         button.addEventListener("click", async function () {
           const target = button.getAttribute("data-screen");
           switchToScreen(target);
+          if (target === "week") {
+            await renderWeekScreen();
+          }
           if (target === "month") {
             await renderMonthScreen();
           }
@@ -1025,6 +1029,33 @@
     }
 
     function bindSettingsEvents() {
+      // Initialise UI controls from the current (possibly loaded) state.
+      const showWeekInput = document.getElementById("setting-show-week");
+      const thresholdInput = document.getElementById("setting-notes-threshold");
+      if (showWeekInput) {
+        showWeekInput.checked = !!state.showWeekScreen;
+        showWeekInput.addEventListener("change", function () {
+          applyShowWeekScreen(showWeekInput.checked);
+          saveSettings();
+        });
+      }
+      if (thresholdInput) {
+        thresholdInput.value = state.notesOverflowThreshold;
+        thresholdInput.addEventListener("change", async function () {
+          const v = parseInt(thresholdInput.value, 10);
+          if (isNaN(v) || v < 1) {
+            thresholdInput.value = state.notesOverflowThreshold;
+            return;
+          }
+          state.notesOverflowThreshold = v;
+          saveSettings();
+          // Re-render Month so the overflow banner updates live if visible.
+          if (document.getElementById("screen-month").classList.contains("active")) {
+            await renderMonthScreen();
+          }
+        });
+      }
+
       document.getElementById("export-btn").addEventListener("click", async function () {
         const entries = await dbGetAll("entries");
         const collections = await dbGetAll("collections");

@@ -19,10 +19,49 @@
       currentMonth: nowDate.getMonth(),
       currentYear: nowDate.getFullYear(),
       futureOffset: 0,
+      weekOffset: 0,
       collActiveMenuEntryId: null,
-      notesOverflowThreshold: 50
+      // User-configurable settings (SPEC §11). Defaults live here and are
+      // overwritten by `loadSettings()` if a saved value exists.
+      notesOverflowThreshold: 50,
+      showWeekScreen: false,
+      weekStartsOn: 1
     };
     let activeMenuEntryId = null;
+
+    // ===== Settings persistence (localStorage) =====
+    const SETTINGS_KEY = "minddump.settings.v1";
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (typeof saved.notesOverflowThreshold === "number" && saved.notesOverflowThreshold > 0) {
+          state.notesOverflowThreshold = saved.notesOverflowThreshold;
+        }
+        if (typeof saved.showWeekScreen === "boolean") {
+          state.showWeekScreen = saved.showWeekScreen;
+        }
+        if (saved.weekStartsOn === 0 || saved.weekStartsOn === 1) {
+          state.weekStartsOn = saved.weekStartsOn;
+        }
+      } catch (err) {
+        console.warn("Не удалось загрузить настройки:", err);
+      }
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+          notesOverflowThreshold: state.notesOverflowThreshold,
+          showWeekScreen: state.showWeekScreen,
+          weekStartsOn: state.weekStartsOn
+        }));
+      } catch (err) {
+        console.warn("Не удалось сохранить настройки:", err);
+      }
+    }
 
     function uid() {
       return crypto.randomUUID();

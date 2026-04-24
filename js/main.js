@@ -107,12 +107,15 @@
     }
 
     async function start() {
+      loadSettings();
       await dbInit();
       await migrateSchemaIfNeeded();
       await autoMigrateLooseNotes();
       await seedDemoDataIfNeeded();
+      applyShowWeekScreen(state.showWeekScreen);
       bindDayNavEvents();
       bindNavEvents();
+      bindWeekNavEvents();
       bindModalEvents();
       bindEntryMenuEvents();
       bindEntryPickerEvents();

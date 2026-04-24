@@ -177,6 +177,10 @@
 
     async function refreshAllScreens() {
       await renderTodayScreen();
+      if (document.getElementById("screen-week") &&
+          document.getElementById("screen-week").classList.contains("active")) {
+        await renderWeekScreen();
+      }
       if (document.getElementById("screen-month").classList.contains("active")) {
         await renderMonthScreen();
       }

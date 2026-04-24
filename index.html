@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/collections.css">
   <link rel="stylesheet" href="css/modals.css">
   <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/week.css">
   <link rel="stylesheet" href="css/responsive.css">
 </head>
 <body>
@@ -26,6 +27,10 @@
       <button class="sidebar-btn active" data-screen="today" type="button">
         <span class="sidebar-icon">◈</span>
         <span>Сегодня</span>
+      </button>
+      <button class="sidebar-btn" data-screen="week" type="button" data-week-btn style="display:none">
+        <span class="sidebar-icon">▥</span>
+        <span>Неделя</span>
       </button>
       <button class="sidebar-btn" data-screen="month" type="button">
         <span class="sidebar-icon">▦</span>
@@ -49,6 +54,17 @@
   <div id="main-content">
     <div id="app">
       <div id="screen-today" class="screen active"></div>
+      <div id="screen-week" class="screen">
+        <div class="week-header">
+          <button class="month-nav-arrow" id="week-prev" type="button">←</button>
+          <div class="week-title-wrap">
+            <div id="week-title" class="week-title-text"></div>
+            <div id="week-range" class="week-range-sub"></div>
+          </div>
+          <button class="month-nav-arrow" id="week-next" type="button">→</button>
+        </div>
+        <div id="week-days-grid"></div>
+      </div>
       <div id="screen-month" class="screen">
         <div class="month-header">
           <button class="month-nav-arrow" id="month-prev" type="button">←</button>
@@ -123,6 +139,29 @@
         </div>
 
         <div class="settings-section">
+          <div class="settings-section-label">Интерфейс</div>
+
+          <div class="settings-item">
+            <div class="settings-item-info">
+              <div class="settings-item-title">Показывать экран «Неделя»</div>
+              <div class="settings-item-desc">Дополнительный экран с видом на 7 дней между Сегодня и Месяц</div>
+            </div>
+            <label class="settings-toggle">
+              <input type="checkbox" id="setting-show-week">
+              <span class="settings-toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="settings-item">
+            <div class="settings-item-info">
+              <div class="settings-item-title">Порог переполнения заметок</div>
+              <div class="settings-item-desc">Когда число заметок без коллекции превысит это значение, в Месяце появится напоминание разобрать их</div>
+            </div>
+            <input type="number" id="setting-notes-threshold" class="settings-number" min="1" max="9999" step="1">
+          </div>
+        </div>
+
+        <div class="settings-section">
           <div class="settings-section-label">Опасная зона</div>
 
           <div class="settings-item">
@@ -153,6 +192,7 @@
 
     <nav id="bottom-nav">
       <button class="nav-btn active" data-screen="today" type="button">◈<span>Сегодня</span></button>
+      <button class="nav-btn" data-screen="week" type="button" data-week-btn style="display:none">▥<span>Неделя</span></button>
       <button class="nav-btn" data-screen="month" type="button">▦<span>Месяц</span></button>
       <button class="nav-btn" data-screen="future" type="button">⬡<span>Полгода</span></button>
       <button class="nav-btn" data-screen="collections" type="button">❑<span>Коллекции</span></button>
@@ -343,6 +383,7 @@
   <script src="js/screens.js"></script>
   <script src="js/collections.js"></script>
   <script src="js/future.js"></script>
+  <script src="js/week.js"></script>
   <script src="js/modals.js"></script>
   <script src="js/main.js"></script>
 </body>

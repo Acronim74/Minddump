@@ -112,3 +112,70 @@
       line-height: 1.5;
     }
 
+    /* ===== Toggle switch (checkbox) ===== */
+    .settings-toggle {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .settings-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .settings-toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .settings-toggle-slider::before {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: left 0.15s, background 0.15s;
+    }
+
+    .settings-toggle input:checked + .settings-toggle-slider {
+      background: rgba(94, 245, 192, 0.18);
+      border-color: var(--accent);
+    }
+
+    .settings-toggle input:checked + .settings-toggle-slider::before {
+      left: 22px;
+      background: var(--accent);
+    }
+
+    /* ===== Number input in settings ===== */
+    .settings-number {
+      flex-shrink: 0;
+      width: 80px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .settings-number:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+

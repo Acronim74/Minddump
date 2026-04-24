@@ -1,0 +1,157 @@
+    /* ===== WEEK SCREEN ===== */
+
+    .week-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .week-title-wrap {
+      flex: 1;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .week-title-text {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .week-range-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    #week-days-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .week-day-block {
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .week-day-block.is-today {
+      border-color: var(--accent);
+      background: rgba(94, 245, 192, 0.04);
+    }
+
+    .week-day-block.is-empty {
+      opacity: 0.55;
+    }
+
+    .week-day-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .week-day-num-badge {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      line-height: 1.2;
+    }
+
+    .week-day-num-badge:hover {
+      border-color: var(--accent);
+    }
+
+    .week-day-block.is-today .week-day-num-badge {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .week-day-num-badge.is-empty {
+      color: var(--text-muted);
+      background: transparent;
+    }
+
+    .week-day-weekday {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .week-day-counts {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .week-day-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .week-day-entries {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .week-entry-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .week-entry-symbol {
+      flex-shrink: 0;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .week-entry-time {
+      flex-shrink: 0;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .week-entry-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .week-entry-row.status-done .week-entry-text,
+    .week-entry-row.status-forgotten .week-entry-text,
+    .week-entry-row.status-irrelevant .week-entry-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .week-day-empty-hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
