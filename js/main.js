@@ -145,15 +145,67 @@
       alert("Ошибка запуска приложения. Откройте консоль браузера.");
     });
 
+    // ===== Service worker + auto-update =====
+    //
+    // The page does three things on every load:
+    //   1. Register the SW (creates one if missing).
+    //   2. Ask the browser to re-fetch sw.js (`registration.update()`).
+    //      If we're online and the server has a new BUILD, this triggers
+    //      install of a new SW; if we're offline the call fails silently
+    //      and the cached version keeps running.
+    //   3. When a new SW finishes installing, tell it to skip the
+    //      "waiting" state and immediately take over. The browser fires
+    //      `controllerchange` once that happens — we use that signal to
+    //      do a one-time soft reload so the page picks up the new code.
+    //
+    // The `hadController` flag prevents the very first SW install (when
+    // there was no controller yet) from triggering an immediate reload
+    // for a user who has just opened the app for the first time.
     if ("serviceWorker" in navigator) {
+      const hadController = !!navigator.serviceWorker.controller;
+      let reloading = false;
+
+      function activateNewWorker(worker) {
+        if (!worker) return;
+        if (worker.state === "installed") {
+          worker.postMessage({ type: "SKIP_WAITING" });
+          return;
+        }
+        worker.addEventListener("statechange", function () {
+          if (worker.state === "installed") {
+            worker.postMessage({ type: "SKIP_WAITING" });
+          }
+        });
+      }
+
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (!hadController) return; // first-ever install: no swap, no reload
+        if (reloading) return;
+        reloading = true;
+        window.location.reload();
+      });
+
       window.addEventListener("load", function () {
         navigator.serviceWorker
-          .register("./sw.js", { scope: "./" })
+          .register("./sw.js", { scope: "./", updateViaCache: "none" })
           .then(function (registration) {
-            console.log("SW registered:", registration.scope);
+            // If a new SW was already waiting between sessions, activate
+            // it right away.
+            if (registration.waiting) activateNewWorker(registration.waiting);
+
+            // If the browser is currently installing one, hook into it.
+            if (registration.installing) activateNewWorker(registration.installing);
+
+            registration.addEventListener("updatefound", function () {
+              activateNewWorker(registration.installing);
+            });
+
+            // Proactively check the server for an updated SW. When
+            // offline this rejects and we silently keep running.
+            registration.update().catch(function () {});
           })
           .catch(function (error) {
-            console.log("SW registration failed:", error);
+            console.warn("SW registration failed:", error);
           });
       });
     }

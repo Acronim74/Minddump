@@ -1,8 +1,19 @@
-// Bumped to v2 after fixing absolute paths that broke installs hosted
-// under a subpath (e.g. GitHub Pages). All entries below are relative
-// to the SW location, so they resolve correctly regardless of where
-// the app is mounted.
-const CACHE_NAME = "minddump-v2";
+// MindDump service worker.
+//
+// Bump `BUILD` on every release. The browser detects any byte change to
+// this file and installs the new SW; we then signal it to take over so
+// the open page can refresh into the new version.
+//
+// Cache strategy:
+//   - on install: precache every shell asset, bypassing the HTTP cache,
+//     so the new SW genuinely picks up changes on the server.
+//   - on activate: drop every previous cache (different BUILD).
+//   - on fetch (GET): cache-first for instant boot. On cache miss try
+//     network and store the response for next time. When offline and
+//     it's a navigation request, fall back to the cached `index.html`
+//     so the SPA shell still renders.
+const BUILD = "2026-04-25.1";
+const CACHE_NAME = "minddump-" + BUILD;
 
 const ASSETS = [
   "./",
@@ -30,48 +41,81 @@ const ASSETS = [
 
 self.addEventListener("install", function (event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function (cache) {
-      // Add entries one by one so a single 404 doesn't abort the whole
-      // install (useful if an asset list drifts from reality).
-      return Promise.all(
+    (async function () {
+      const cache = await caches.open(CACHE_NAME);
+      // Add entries individually (rather than `cache.addAll`) so a single
+      // failing URL doesn't abort the entire install.
+      await Promise.all(
         ASSETS.map(function (url) {
-          return cache.add(url).catch(function (err) {
-            console.warn("[sw] failed to cache", url, err);
-          });
+          // `cache: "no-cache"` forces a conditional revalidation against
+          // the server and ignores the browser HTTP cache. Without it a
+          // freshly bumped BUILD might still pull a stale asset from
+          // `disk cache`.
+          return cache
+            .add(new Request(url, { cache: "no-cache" }))
+            .catch(function (err) {
+              console.warn("[sw] failed to precache", url, err);
+            });
         })
       );
-    })
+    })()
   );
+  // Don't wait for old clients to close — install ASAP so the new
+  // version is ready to take over once the page asks.
   self.skipWaiting();
 });
 
 self.addEventListener("activate", function (event) {
   event.waitUntil(
-    caches.keys().then(function (keys) {
-      return Promise.all(
+    (async function () {
+      const keys = await caches.keys();
+      await Promise.all(
         keys
           .filter(function (key) { return key !== CACHE_NAME; })
           .map(function (key) { return caches.delete(key); })
       );
-    })
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
-  if (event.request.url.includes("chrome-extension")) return;
+  if (event.request.url.startsWith("chrome-extension:")) return;
 
   event.respondWith(
-    caches.match(event.request).then(function (cached) {
+    (async function () {
+      const cached = await caches.match(event.request);
       if (cached) return cached;
-      return fetch(event.request).catch(function () {
-        // Offline navigation fallback — serve the SPA shell.
+      try {
+        const response = await fetch(event.request);
+        // Opportunistically cache successful same-origin responses so
+        // assets loaded after install (e.g. lazy fonts) are also offline.
+        if (
+          response &&
+          response.ok &&
+          (new URL(event.request.url).origin === self.location.origin)
+        ) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(function (cache) {
+            cache.put(event.request, clone).catch(function () {});
+          });
+        }
+        return response;
+      } catch (_err) {
         if (event.request.mode === "navigate") {
           return caches.match("./index.html");
         }
         return Response.error();
-      });
-    })
+      }
+    })()
   );
+});
+
+// The page calls this when it has detected a waiting SW and wants the
+// new version to take control immediately.
+self.addEventListener("message", function (event) {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
